@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package product;
+
+enum ProductStatus {
+    DRAFT = 0;
+    PUBLISHED = 1;
+    OFF_THE_SHELF = 2;
+}
+
+message GetProductsRequest{
+	int64 creatorid = 1;
+    int64 size = 2;
+}
+
+message GetProductsResponse{
+    repeated ProductRecord products = 1;
+}
+
+message ProductRecord{
+    string creator = 1;
+    string name = 2;
+    string description = 3;
+    int32 price = 4;
+    ProductStatus status = 5;
+}
+
+message OkResponse {}
+
+service ProductRpcService{
+	rpc GetProducts(GetProductsRequest) returns (GetProductsResponse) {}
+}
+  

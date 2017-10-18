@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option java_package = "com.dabanshan.grpc.service"; 
+
+package user;
+
+import "UserModel.proto";
+
+//Service
+service UserRpcService{
+    // 注册
+    rpc CreateUser (RegisterRequest) returns (RegisterResponse) {}
+    // 获取用户信息
+    rpc GetUser (GetUserRequest) returns (User) {}
+    // 登录
+    rpc LoginUser (LoginRequest) returns (GetUserResponse) {}
+}
