@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package product;
+package pb;
 
 enum ProductStatus {
     DRAFT = 0;

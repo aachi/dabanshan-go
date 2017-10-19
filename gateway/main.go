@@ -1,92 +1,114 @@
-package gateway
+package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
+	"io"
 	"net/http"
-	"net/http/pprof"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/facebookgo/grace/gracehttp"
-	"github.com/gin-gonic/gin"
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/sd/consul"
-	consulapi "github.com/hashicorp/consul/api"
-	"github.com/laidingqing/dabanshan/client/products"
+	"google.golang.org/grpc"
+
+	"github.com/go-kit/kit/endpoint"
+	consulsd "github.com/go-kit/kit/sd/consul"
+	"github.com/gorilla/mux"
+	"github.com/hashicorp/consul/api"
+	p_endpoint "github.com/laidingqing/dabanshan/svcs/product/endpoint"
+	p_service "github.com/laidingqing/dabanshan/svcs/product/service"
+	p_transport "github.com/laidingqing/dabanshan/svcs/product/transport"
 	stdopentracing "github.com/opentracing/opentracing-go"
-	zipkin "github.com/openzipkin/zipkin-go-opentracing"
-	stdprometheus "github.com/prometheus/client_golang/prometheus"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/kit/sd/lb"
 )
 
 func main() {
 	var (
-		httpAddr   = flag.String("http.addr", ":8080", "HTTP server address")
-		consulAddr = flag.String("consul.addr", "", "consul registry address")
-		zipkinAddr = flag.String("zipkin.addr", "", "tracer server address")
+		httpAddr     = flag.String("http.addr", ":8000", "Address for HTTP (JSON) server")
+		consulAddr   = flag.String("consul.addr", "", "Consul agent address")
+		retryMax     = flag.Int("retry.max", 3, "per-request retries to different instances")
+		retryTimeout = flag.Duration("retry.timeout", 500*time.Millisecond, "per-request timeout, including retries")
 	)
 	flag.Parse()
+
 	// Logging domain.
 	var logger log.Logger
-	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
-	logger = log.With(logger, "caller", log.DefaultCaller)
-	var sdClient consul.Client
+	{
+		logger = log.NewLogfmtLogger(os.Stderr)
+		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
+		logger = log.With(logger, "caller", log.DefaultCaller)
+	}
 
-	apiclient, err := consulapi.NewClient(&consulapi.Config{
-		Address: *consulAddr,
-	})
-
-	sdClient = consul.NewClient(apiclient)
-
-	if err != nil {
-		logger.Log("err", err)
-		os.Exit(1)
+	// Service discovery domain. In this example we use Consul.
+	var client consulsd.Client
+	{
+		consulConfig := api.DefaultConfig()
+		if len(*consulAddr) > 0 {
+			consulConfig.Address = *consulAddr
+		}
+		consulClient, err := api.NewClient(consulConfig)
+		if err != nil {
+			logger.Log("err", err)
+			os.Exit(1)
+		}
+		client = consulsd.NewClient(consulClient)
 	}
 
 	// Transport domain.
-	tracer := stdopentracing.GlobalTracer() // nop by default
-	if *zipkinAddr != "" {
-		logger := log.With(logger, "tracer", "Zipkin")
-		logger.Log("addr", *zipkinAddr)
-		collector, err := zipkin.NewHTTPCollector(
-			*zipkinAddr,
-			zipkin.HTTPLogger(logger),
+	tracer := stdopentracing.GlobalTracer() // no-op
+	ctx := context.Background()
+	r := mux.NewRouter()
+
+	// products routes.
+	{
+		var (
+			tags        = []string{}
+			passingOnly = true
+			endpoints   = p_endpoint.Set{}
+			instancer   = consulsd.NewInstancer(client, logger, "productsvc", tags, passingOnly)
 		)
-		if err != nil {
-			logger.Log("err", err)
-			os.Exit(1)
+		{
+			factory := addsvcFactory(p_endpoint.MakeGetProductsEndpoint, tracer, logger)
+			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			endpoints.GetProductsEndpoint = retry
 		}
-		tracer, err = zipkin.NewTracer(
-			zipkin.NewRecorder(collector, false, "localhost:80", "http"),
-		)
-		if err != nil {
-			logger.Log("err", err)
-			os.Exit(1)
-		}
+		r.PathPrefix("/addsvc").Handler(http.StripPrefix("/api", p_transport.NewHTTPHandler(endpoints, tracer, logger)))
 	}
 
-	// Debug listener.
+	// Interrupt handler.
+	errc := make(chan error)
 	go func() {
-		logger := log.With(logger, "transport", "debug")
-
-		m := http.NewServeMux()
-		m.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))
-		m.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
-		m.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
-		m.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
-		m.Handle("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
-		m.Handle("/metrics", stdprometheus.Handler())
-
-		logger.Log("addr", ":6060")
-		http.ListenAndServe(":6060", m)
+		c := make(chan os.Signal)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+		errc <- fmt.Errorf("%s", <-c)
 	}()
 
-	products.InitWithSD(sdClient, tracer, logger)
-	//Inject
-	router := gin.New()
-	Register(router)
+	// HTTP transport.
+	go func() {
+		logger.Log("transport", "HTTP", "addr", *httpAddr)
+		errc <- http.ListenAndServe(*httpAddr, r)
+	}()
 
-	server := &http.Server{Addr: *httpAddr, Handler: router}
-	if err = gracehttp.Serve(server); err != nil {
-		panic(err)
+	// Run!
+	logger.Log("exit", <-errc)
+
+}
+
+func addsvcFactory(makeEndpoint func(p_service.Service) endpoint.Endpoint, tracer stdopentracing.Tracer, logger log.Logger) sd.Factory {
+	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
+		conn, err := grpc.Dial(instance, grpc.WithInsecure())
+		if err != nil {
+			return nil, nil, err
+		}
+		service := p_transport.NewGRPCClient(conn, tracer, logger)
+		endpoint := makeEndpoint(service)
+		return endpoint, conn, nil
 	}
 }
