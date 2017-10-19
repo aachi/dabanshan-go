@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -61,7 +60,7 @@ func main() {
 
 	// Transport domain.
 	tracer := stdopentracing.GlobalTracer() // no-op
-	ctx := context.Background()
+	// ctx := context.Background()
 	r := mux.NewRouter()
 
 	// products routes.

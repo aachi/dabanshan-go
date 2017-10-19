@@ -43,10 +43,10 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 
 // GetProducts implements the service interface, so Set may be used as a service.
 // This is primarily useful in the context of a client library.
-func (s Set) GetProducts(ctx context.Context, req *pb.GetProductsRequest) (pb.GetProductsResponse, error) {
+func (s Set) GetProducts(ctx context.Context, req *pb.GetProductsRequest) (*pb.GetProductsResponse, error) {
 	resp, err := s.GetProductsEndpoint(ctx, req)
 	response := resp.(pb.GetProductsResponse)
-	return response, err
+	return &response, err
 }
 
 // MakeGetProductsEndpoint constructs a GetProducts endpoint wrapping the service.
