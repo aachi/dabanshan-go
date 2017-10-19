@@ -29,7 +29,7 @@ import (
 func main() {
 	var (
 		httpAddr     = flag.String("http.addr", ":8000", "Address for HTTP (JSON) server")
-		consulAddr   = flag.String("consul.addr", "", "Consul agent address")
+		consulAddr   = flag.String("consul.addr", "localhost:8500", "Consul agent address")
 		retryMax     = flag.Int("retry.max", 3, "per-request retries to different instances")
 		retryTimeout = flag.Duration("retry.timeout", 500*time.Millisecond, "per-request timeout, including retries")
 	)
@@ -78,7 +78,8 @@ func main() {
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			endpoints.GetProductsEndpoint = retry
 		}
-		r.PathPrefix("/addsvc").Handler(http.StripPrefix("/api", p_transport.NewHTTPHandler(endpoints, tracer, logger)))
+		api := r.PathPrefix("/api").Subrouter()
+		api.PathPrefix("/addsvc").Handler(p_transport.NewHTTPHandler(endpoints, tracer, logger)).Methods("GET")
 	}
 
 	// Interrupt handler.

@@ -7,9 +7,15 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"text/tabwriter"
 
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/metrics/prometheus"
+	consulsd "github.com/go-kit/kit/sd/consul"
+	"github.com/hashicorp/consul/api"
 	lightstep "github.com/lightstep/lightstep-tracer-go"
 	"github.com/oklog/oklog/pkg/group"
 	stdopentracing "github.com/opentracing/opentracing-go"
@@ -20,10 +26,6 @@ import (
 	"sourcegraph.com/sourcegraph/appdash"
 	appdashot "sourcegraph.com/sourcegraph/appdash/opentracing"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/metrics/prometheus"
-
 	addpb "github.com/laidingqing/dabanshan/pb"
 	p_endpoint "github.com/laidingqing/dabanshan/svcs/product/endpoint"
 	p_service "github.com/laidingqing/dabanshan/svcs/product/service"
@@ -33,12 +35,14 @@ import (
 func main() {
 	fs := flag.NewFlagSet("productSvc", flag.ExitOnError)
 	var (
-		debugAddr      = fs.String("debug.addr", ":8080", "Debug and metrics listen address")
 		httpAddr       = fs.String("http-addr", ":8081", "HTTP listen address")
 		grpcAddr       = fs.String("grpc-addr", ":8082", "gRPC listen address")
-		zipkinURL      = fs.String("zipkin-url", "", "Enable Zipkin tracing via a collector URL e.g. http://localhost:9411/api/v1/spans")
+		consulAddr     = flag.String("consul.addr", "localhost:8500", "Consul agent address")
+		zipkinURL      = fs.String("zipkin-url", "http://localhost:9411/api/v1/spans", "Enable Zipkin tracing via a collector URL e.g. http://localhost:9411/api/v1/spans")
 		lightstepToken = flag.String("lightstep-token", "", "Enable LightStep tracing via a LightStep access token")
 		appdashAddr    = flag.String("appdash-addr", "", "Enable Appdash tracing via an Appdash server host:port")
+		serviceName    = flag.String("service.name", "product-svc", "Name of the service")
+		instance       = flag.Int("instance", 0, "The instance count of the status service")
 	)
 	fs.Usage = usageFor(fs, os.Args[0]+" [flags]")
 	fs.Parse(os.Args[1:])
@@ -51,6 +55,26 @@ func main() {
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
+	controlSvc := &service{
+		HTTPAddress: httpAddr,
+		GRPCAddress: grpcAddr,
+		Name:        serviceName,
+		Instance:    *instance}
+
+	var (
+		kitconsul consulsd.Client
+	)
+	{
+		var err error
+		kitconsul, err = createConsulClient(consulAddr, logger)
+		if err != nil {
+			logger.Log("err", err)
+		}
+		err = registerService(kitconsul, controlSvc)
+		if err != nil {
+			logger.Log("err", err)
+		}
+	}
 	// Determine which tracer to use. We'll pass the tracer to all the
 	// components that use it, as a dependency.
 	var tracer stdopentracing.Tracer
@@ -128,22 +152,6 @@ func main() {
 
 	var g group.Group
 	{
-		// The debug listener mounts the http.DefaultServeMux, and serves up
-		// stuff like the Prometheus metrics route, the Go debug and profiling
-		// routes, and so on.
-		debugListener, err := net.Listen("tcp", *debugAddr)
-		if err != nil {
-			logger.Log("transport", "debug/HTTP", "during", "Listen", "err", err)
-			os.Exit(1)
-		}
-		g.Add(func() error {
-			logger.Log("transport", "debug/HTTP", "addr", *debugAddr)
-			return http.Serve(debugListener, http.DefaultServeMux)
-		}, func(error) {
-			debugListener.Close()
-		})
-	}
-	{
 		// The HTTP listener mounts the Go kit HTTP handler we created.
 		httpListener, err := net.Listen("tcp", *httpAddr)
 		if err != nil {
@@ -205,4 +213,40 @@ func usageFor(fs *flag.FlagSet, short string) func() {
 		w.Flush()
 		fmt.Fprintf(os.Stderr, "\n")
 	}
+}
+
+type service struct {
+	GRPCAddress *string
+	HTTPAddress *string
+	Instance    int
+	Name        *string
+}
+
+func createConsulClient(consulAddr *string, logger log.Logger) (consulsd.Client, error) {
+	consulConfig := api.DefaultConfig()
+	if len(*consulAddr) > 0 {
+		consulConfig.Address = *consulAddr
+	}
+	consulClient, err := api.NewClient(consulConfig)
+	return consulsd.NewClient(consulClient), err
+}
+
+func registerService(client consulsd.Client, svc *service) error {
+	check := &api.AgentServiceCheck{
+		HTTP:     fmt.Sprintf("http://%v/health", *svc.HTTPAddress),
+		Interval: "10s",
+		Timeout:  "3s",
+	}
+	host, strPort, _ := net.SplitHostPort(*svc.GRPCAddress)
+	port, _ := strconv.Atoi(strPort)
+	reg := &api.AgentServiceRegistration{
+		Name:    *svc.Name,
+		Address: host,
+		Port:    port,
+		ID:      *svc.Name + "-" + strconv.Itoa(svc.Instance),
+		Tags:    []string{"grpc"},
+		Check:   check,
+	}
+	err := client.Register(reg)
+	return err
 }

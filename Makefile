@@ -6,7 +6,7 @@ TARGETDIR := bin
 .PHONY: build
 build:
 	@for target in $(TARGETS) ; do \
-		$(GO) build -o "$(TARGETDIR)/$$target" ./cmd/$$target.go ; \
+		$(GO) build -o "$(TARGETDIR)/$$target" ./cmd/$$target/main.go ; \
 	done
 
 .PHONY: clean
