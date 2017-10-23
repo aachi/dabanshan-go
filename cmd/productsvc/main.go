@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	corelog "log"
 	"net"
 	"net/http"
 	"os"
@@ -16,6 +17,8 @@ import (
 	"github.com/go-kit/kit/metrics/prometheus"
 	consulsd "github.com/go-kit/kit/sd/consul"
 	"github.com/hashicorp/consul/api"
+	"github.com/laidingqing/dabanshan/svcs/product/db"
+	"github.com/laidingqing/dabanshan/svcs/product/db/mongodb"
 	lightstep "github.com/lightstep/lightstep-tracer-go"
 	"github.com/oklog/oklog/pkg/group"
 	stdopentracing "github.com/opentracing/opentracing-go"
@@ -31,6 +34,10 @@ import (
 	p_service "github.com/laidingqing/dabanshan/svcs/product/service"
 	p_transport "github.com/laidingqing/dabanshan/svcs/product/transport"
 )
+
+func init() {
+	db.Register("mongodb", &mongodb.Mongo{})
+}
 
 func main() {
 	fs := flag.NewFlagSet("productSvc", flag.ExitOnError)
@@ -111,6 +118,19 @@ func main() {
 		} else {
 			logger.Log("tracer", "none")
 			tracer = stdopentracing.GlobalTracer() // no-op
+		}
+	}
+
+	dbconn := false
+	for !dbconn {
+		err := db.Init()
+		if err != nil {
+			if err == db.ErrNoDatabaseSelected {
+				corelog.Fatal(err)
+			}
+			corelog.Print(err)
+		} else {
+			dbconn = true
 		}
 	}
 
