@@ -14,7 +14,8 @@ message GetProductsRequest{
 }
 
 message GetProductsResponse{
-    repeated ProductRecord products = 1;
+    int64 v = 1;
+    string err = 2;
 }
 
 message ProductRecord{

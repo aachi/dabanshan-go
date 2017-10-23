@@ -13,7 +13,6 @@ import (
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
-	"github.com/laidingqing/dabanshan/pb"
 	"github.com/laidingqing/dabanshan/svcs/product/service"
 )
 
@@ -43,21 +42,21 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 
 // GetProducts implements the service interface, so Set may be used as a service.
 // This is primarily useful in the context of a client library.
-func (s Set) GetProducts(ctx context.Context, req *pb.GetProductsRequest) (*pb.GetProductsResponse, error) {
-	resp, err := s.GetProductsEndpoint(ctx, req)
-	response := resp.(pb.GetProductsResponse)
-	return &response, err
+func (s Set) GetProducts(ctx context.Context, a, b int64) (int64, error) {
+	resp, err := s.GetProductsEndpoint(ctx, GetProductsRequest{A: a, B: b})
+	if err != nil {
+		return 0, err
+	}
+	response := resp.(GetProductsResponse)
+	return response.V, response.Err
 }
 
 // MakeGetProductsEndpoint constructs a GetProducts endpoint wrapping the service.
 func MakeGetProductsEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(GetProductsRequest)
-		v, err := s.GetProducts(ctx, &pb.GetProductsRequest{
-			Creatorid: req.A,
-			Size:      req.B,
-		})
-		return GetProductsResponse{V: v.GetProducts(), Err: err}, nil
+		v, err := s.GetProducts(ctx, req.A, req.B)
+		return GetProductsResponse{V: v, Err: err}, nil
 	}
 }
 
@@ -75,8 +74,8 @@ type GetProductsRequest struct {
 
 // GetProductsResponse collects the response values for the GetProducts method.
 type GetProductsResponse struct {
-	V   []*pb.ProductRecord `json:"v"`
-	Err error               `json:"-"` // should be intercepted by Failed/errorEncoder
+	V   int64 `json:"v"`
+	Err error `json:"-"` // should be intercepted by Failed/errorEncoder
 }
 
 // Failed implements Failer.

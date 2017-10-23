@@ -4,17 +4,25 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 
+	"github.com/gorilla/mux"
 	stdopentracing "github.com/opentracing/opentracing-go"
 
 	"github.com/go-kit/kit/examples/addsvc/pkg/addendpoint"
-	"github.com/go-kit/kit/examples/addsvc/pkg/addservice"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/opentracing"
 	httptransport "github.com/go-kit/kit/transport/http"
 	p_endpoint "github.com/laidingqing/dabanshan/svcs/product/endpoint"
+	"github.com/laidingqing/dabanshan/svcs/product/service"
+)
+
+var (
+	// ErrBadRouting ..
+	ErrBadRouting = errors.New("inconsistent mapping between route and handler (programmer error)")
 )
 
 // NewHTTPHandler returns an HTTP handler that makes a set of endpoints
@@ -24,20 +32,30 @@ func NewHTTPHandler(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logg
 		httptransport.ServerErrorEncoder(errorEncoder),
 		httptransport.ServerErrorLogger(logger),
 	}
-	m := http.NewServeMux()
-	m.Handle("/products", httptransport.NewServer(
+	// m := http.NewServeMux()
+	r := mux.NewRouter()
+
+	listProductHandle := httptransport.NewServer(
 		endpoints.GetProductsEndpoint,
 		decodeHTTPGetProductRequest,
 		encodeHTTPGenericResponse,
 		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "GetProducts", logger)))...,
-	))
-	return m
+	)
+
+	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		logger.Log("params", r.FormValue("user"))
+		w.WriteHeader(http.StatusOK)
+	})
+	r.Handle("/api/products", listProductHandle).Methods("GET")
+	return r
 }
 
 func decodeHTTPGetProductRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req p_endpoint.GetProductsRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	return req, err
+	// err := json.NewDecoder(r.Body).Decode(&req)
+	// todo convert params..
+	a, _ := strconv.ParseInt(r.FormValue("userid"), 10, 64)
+	b, _ := strconv.ParseInt(r.FormValue("size"), 10, 64)
+	return p_endpoint.GetProductsRequest{A: a, B: b}, nil
 }
 
 func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {
@@ -73,7 +91,7 @@ type errorWrapper struct {
 
 func err2code(err error) int {
 	switch err {
-	case addservice.ErrTwoZeroes, addservice.ErrMaxSizeExceeded, addservice.ErrIntOverflow:
+	case service.ErrTwoZeroes, service.ErrMaxSizeExceeded, service.ErrIntOverflow:
 		return http.StatusBadRequest
 	}
 	return http.StatusInternalServerError

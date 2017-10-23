@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"os"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	consulsd "github.com/go-kit/kit/sd/consul"
-	"github.com/gorilla/mux"
 	"github.com/hashicorp/consul/api"
 	p_endpoint "github.com/laidingqing/dabanshan/svcs/product/endpoint"
 	p_service "github.com/laidingqing/dabanshan/svcs/product/service"
@@ -61,8 +61,8 @@ func main() {
 	// Transport domain.
 	tracer := stdopentracing.GlobalTracer() // no-op
 	// ctx := context.Background()
-	r := mux.NewRouter()
-
+	// r := mux.NewRouter()
+	mux := http.NewServeMux()
 	// products routes.
 	{
 		var (
@@ -78,12 +78,14 @@ func main() {
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			endpoints.GetProductsEndpoint = retry
 		}
-		api := r.PathPrefix("/api").Subrouter()
-		api.PathPrefix("/addsvc").Handler(p_transport.NewHTTPHandler(endpoints, tracer, logger)).Methods("GET")
+		mux.Handle("/api/products", p_transport.NewHTTPHandler(endpoints, tracer, logger))
+		mux.HandleFunc("/api/echo", func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.FormValue("user")))
+		})
 	}
-
+	http.Handle("/", accessControl(mux))
 	// Interrupt handler.
-	errc := make(chan error)
+	errc := make(chan error, 2)
 	go func() {
 		c := make(chan os.Signal)
 		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
@@ -93,12 +95,24 @@ func main() {
 	// HTTP transport.
 	go func() {
 		logger.Log("transport", "HTTP", "addr", *httpAddr)
-		errc <- http.ListenAndServe(*httpAddr, r)
+		errc <- http.ListenAndServe(*httpAddr, nil)
 	}()
 
 	// Run!
 	logger.Log("exit", <-errc)
 
+}
+
+func accessControl(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type")
+		if r.Method == "OPTIONS" {
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
 }
 
 func addsvcFactory(makeEndpoint func(p_service.Service) endpoint.Endpoint, tracer stdopentracing.Tracer, logger log.Logger) sd.Factory {

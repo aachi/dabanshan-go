@@ -35,14 +35,15 @@ import (
 func main() {
 	fs := flag.NewFlagSet("productSvc", flag.ExitOnError)
 	var (
+		debugAddr      = fs.String("debug.addr", ":8080", "Debug and metrics listen address")
 		httpAddr       = fs.String("http-addr", ":8081", "HTTP listen address")
 		grpcAddr       = fs.String("grpc-addr", ":8082", "gRPC listen address")
 		consulAddr     = flag.String("consul.addr", "localhost:8500", "Consul agent address")
 		zipkinURL      = fs.String("zipkin-url", "http://localhost:9411/api/v1/spans", "Enable Zipkin tracing via a collector URL e.g. http://localhost:9411/api/v1/spans")
 		lightstepToken = flag.String("lightstep-token", "", "Enable LightStep tracing via a LightStep access token")
 		appdashAddr    = flag.String("appdash-addr", "", "Enable Appdash tracing via an Appdash server host:port")
-		serviceName    = flag.String("service.name", "product-svc", "Name of the service")
-		instance       = flag.Int("instance", 0, "The instance count of the status service")
+		serviceName    = flag.String("service.name", "productsvc", "Name of the service")
+		instance       = flag.Int("instance", 1, "The instance count of the status service")
 	)
 	fs.Usage = usageFor(fs, os.Args[0]+" [flags]")
 	fs.Parse(os.Args[1:])
@@ -90,7 +91,7 @@ func main() {
 			var (
 				debug       = false
 				hostPort    = "localhost:80"
-				serviceName = "addsvc"
+				serviceName = "productsvc"
 			)
 			recorder := zipkin.NewRecorder(collector, debug, hostPort, serviceName)
 			tracer, err = zipkin.NewTracer(recorder)
@@ -119,14 +120,14 @@ func main() {
 	{
 		// Business-level metrics.
 		ints = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
-			Namespace: "example",
-			Subsystem: "addsvc",
+			Namespace: "dabanshan",
+			Subsystem: "products",
 			Name:      "integers_summed",
 			Help:      "Total count of integers summed via the Sum method.",
 		}, []string{})
 		chars = prometheus.NewCounterFrom(stdprometheus.CounterOpts{
-			Namespace: "example",
-			Subsystem: "addsvc",
+			Namespace: "dabanshan",
+			Subsystem: "products",
 			Name:      "characters_concatenated",
 			Help:      "Total count of characters concatenated via the Concat method.",
 		}, []string{})
@@ -142,6 +143,9 @@ func main() {
 		}, []string{"method", "success"})
 	}
 	http.DefaultServeMux.Handle("/metrics", promhttp.Handler())
+	http.DefaultServeMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	var (
 		service     = p_service.New(logger, ints, chars)
@@ -151,6 +155,19 @@ func main() {
 	)
 
 	var g group.Group
+	{
+		debugListener, err := net.Listen("tcp", *debugAddr)
+		if err != nil {
+			logger.Log("transport", "debug/HTTP", "during", "Listen", "err", err)
+			os.Exit(1)
+		}
+		g.Add(func() error {
+			logger.Log("transport", "debug/HTTP", "addr", *debugAddr)
+			return http.Serve(debugListener, http.DefaultServeMux)
+		}, func(error) {
+			debugListener.Close()
+		})
+	}
 	{
 		// The HTTP listener mounts the Go kit HTTP handler we created.
 		httpListener, err := net.Listen("tcp", *httpAddr)
@@ -233,7 +250,7 @@ func createConsulClient(consulAddr *string, logger log.Logger) (consulsd.Client,
 
 func registerService(client consulsd.Client, svc *service) error {
 	check := &api.AgentServiceCheck{
-		HTTP:     fmt.Sprintf("http://%v/health", *svc.HTTPAddress),
+		HTTP:     fmt.Sprintf("http://127.0.0.1%v/health", *svc.HTTPAddress),
 		Interval: "10s",
 		Timeout:  "3s",
 	}

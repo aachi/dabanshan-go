@@ -2,6 +2,7 @@ package transport
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"google.golang.org/grpc"
@@ -25,6 +26,7 @@ type grpcServer struct {
 	getproducts grpctransport.Handler
 }
 
+// NewGRPCServer ...
 func NewGRPCServer(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logger log.Logger) pb.ProductRpcServiceServer {
 	options := []grpctransport.ServerOption{
 		grpctransport.ServerErrorLogger(logger),
@@ -32,8 +34,8 @@ func NewGRPCServer(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logge
 	return &grpcServer{
 		getproducts: grpctransport.NewServer(
 			endpoints.GetProductsEndpoint,
-			encodeGRPCGetProductsRequest,
-			decodeGRPCGetProductsResponse,
+			decodeGRPCGetProductsRequest,
+			encodeGRPCGetProductsResponse,
 			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "GetProducts", logger)))...,
 		),
 	}
@@ -48,6 +50,16 @@ func (s *grpcServer) GetProducts(ctx oldcontext.Context, req *pb.GetProductsRequ
 	return res, nil
 }
 
+func decodeGRPCGetProductsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.GetProductsRequest)
+	return p_endpoint.GetProductsRequest{A: int64(req.Creatorid), B: int64(req.Size)}, nil
+}
+
+func encodeGRPCGetProductsResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(p_endpoint.GetProductsResponse)
+	return &pb.GetProductsResponse{V: int64(resp.V), Err: err2str(resp.Err)}, nil
+}
+
 // NewGRPCClient ...
 func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger log.Logger) service.Service {
 	limiter := ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(100, 100))
@@ -55,7 +67,7 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 	{
 		getProductsEndpoint = grpctransport.NewClient(
 			conn,
-			"pb.GetProducts",
+			"pb.ProductRpcService",
 			"GetProducts",
 			encodeGRPCGetProductsRequest,
 			decodeGRPCGetProductsResponse,
@@ -76,10 +88,24 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 
 func encodeGRPCGetProductsRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(p_endpoint.GetProductsRequest)
-	return &pb.GetProductsRequest{Creatorid: req.A, Size: req.B}, nil
+	return &pb.GetProductsRequest{Creatorid: int64(req.A), Size: int64(req.B)}, nil
 }
 
 func decodeGRPCGetProductsResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
 	reply := grpcReply.(*pb.GetProductsResponse)
-	return p_endpoint.GetProductsResponse{V: reply.GetProducts(), Err: nil}, nil
+	return p_endpoint.GetProductsResponse{V: int64(reply.V), Err: str2err(reply.Err)}, nil
+}
+
+func str2err(s string) error {
+	if s == "" {
+		return nil
+	}
+	return errors.New(s)
+}
+
+func err2str(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }

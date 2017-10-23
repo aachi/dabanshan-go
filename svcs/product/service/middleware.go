@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
-	"github.com/laidingqing/dabanshan/pb"
 )
 
 type Middleware func(Service) Service
@@ -22,11 +21,11 @@ type loggingMiddleware struct {
 	next   Service
 }
 
-func (mw loggingMiddleware) GetProducts(ctx context.Context, req *pb.GetProductsRequest) (res *pb.GetProductsResponse, err error) {
+func (mw loggingMiddleware) GetProducts(ctx context.Context, a, b int64) (v int64, err error) {
 	defer func() {
 		mw.logger.Log("method", "GetProducts", "err", err)
 	}()
-	return mw.next.GetProducts(ctx, req)
+	return mw.next.GetProducts(ctx, a, b)
 }
 
 // InstrumentingMiddleware ..
@@ -46,8 +45,8 @@ type instrumentingMiddleware struct {
 	next  Service
 }
 
-func (mw instrumentingMiddleware) GetProducts(ctx context.Context, req *pb.GetProductsRequest) (*pb.GetProductsResponse, error) {
-	v, err := mw.next.GetProducts(ctx, req)
+func (mw instrumentingMiddleware) GetProducts(ctx context.Context, a, b int64) (int64, error) {
+	v, err := mw.next.GetProducts(ctx, a, b)
 	// mw.ints.Add(float64(v))
 	return v, err
 }

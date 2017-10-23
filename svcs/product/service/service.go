@@ -22,7 +22,7 @@ func init() {
 
 // Service describes a service that adds things together.
 type Service interface {
-	GetProducts(ctx context.Context, req *pb.GetProductsRequest) (*pb.GetProductsResponse, error)
+	GetProducts(ctx context.Context, a, b int64) (int64, error)
 }
 
 // New returns a basic Service with all of the expected middlewares wired in.
@@ -37,7 +37,18 @@ func New(logger log.Logger, ints, chars metrics.Counter) Service {
 }
 
 var (
-	ErrUserNotFound = errors.New("user not found")
+	// ErrTwoZeroes ..
+	ErrTwoZeroes = errors.New("can't sum two zeroes")
+	// ErrIntOverflow ...
+	ErrIntOverflow = errors.New("integer overflow")
+	// ErrMaxSizeExceeded ...
+	ErrMaxSizeExceeded = errors.New("result exceeds maximum size")
+)
+
+const (
+	intMax = 1<<31 - 1
+	intMin = -(intMax + 1)
+	maxLen = 10
 )
 
 // NewBasicService returns a naïve, stateless implementation of Service.
@@ -47,22 +58,12 @@ func NewBasicService() Service {
 
 type basicService struct{}
 
-func (s basicService) GetProducts(_ context.Context, req *pb.GetProductsRequest) (*pb.GetProductsResponse, error) {
-	userID := req.GetCreatorid()
-	size := req.GetSize()
-	products := []*pb.ProductRecord{}
-	mu.RLock()
-	defer mu.RUnlock()
-	if v, ok := mem[userID]; !ok {
-		return nil, ErrUserNotFound
-	} else {
-		for _, f := range v {
-			if size <= 0 {
-				break
-			}
-			products = append(products, f)
-			size--
-		}
+func (s basicService) GetProducts(_ context.Context, a, b int64) (int64, error) {
+	if a == 0 && b == 0 {
+		return 0, ErrTwoZeroes
 	}
-	return &pb.GetProductsResponse{Products: products}, nil
+	if (b > 0 && a > (intMax-b)) || (b < 0 && a < (intMin-b)) {
+		return 0, ErrIntOverflow
+	}
+	return a + b, nil
 }
