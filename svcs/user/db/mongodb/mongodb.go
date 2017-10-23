@@ -6,7 +6,8 @@ import (
 	"net/url"
 	"time"
 
-	m_product "github.com/laidingqing/dabanshan/svcs/product/model"
+	m_user "github.com/laidingqing/dabanshan/svcs/user/model"
+
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -25,10 +26,24 @@ func init() {
 	host = *flag.String("mongohost", "127.0.0.1:27017", "mongo host")
 }
 
-// Mongo ...
+// Mongo meets the Database interface requirements
 type Mongo struct {
 	//Session is a MongoDB Session
 	Session *mgo.Session
+}
+
+// MongoUser is a wrapper for the users
+type MongoUser struct {
+	m_user.User `bson:",inline"`
+	ID          bson.ObjectId `bson:"_id"`
+}
+
+// New Returns a new MongoUser
+func New() MongoUser {
+	u := m_user.New()
+	return MongoUser{
+		User: u,
+	}
 }
 
 // Init MongoDB
@@ -42,38 +57,6 @@ func (m *Mongo) Init() error {
 	return m.EnsureIndexes()
 }
 
-// CreateProduct ...
-func (m *Mongo) CreateProduct(p *m_product.Product) error {
-	s := m.Session.Copy()
-	defer s.Close()
-	id := bson.NewObjectId()
-	mp := New()
-	mp.Product = *p
-	mp.ID = id
-	c := s.DB(db).C("products")
-	_, err := c.UpsertId(mp.ID, mp)
-	if err != nil {
-		return err
-	}
-	mp.Product.ProductID = mp.ID.Hex()
-	*p = mp.Product
-	return nil
-}
-
-// MongoProduct is a wrapper for the users
-type MongoProduct struct {
-	m_product.Product `bson:",inline"`
-	ID                bson.ObjectId `bson:"_id"`
-}
-
-// New Returns a new MongoProduct
-func New() MongoProduct {
-	p := m_product.New()
-	return MongoProduct{
-		Product: p,
-	}
-}
-
 // EnsureIndexes ensures userid is unique
 func (m *Mongo) EnsureIndexes() error {
 	s := m.Session.Copy()
@@ -85,7 +68,7 @@ func (m *Mongo) EnsureIndexes() error {
 		Background: true,
 		Sparse:     false,
 	}
-	c := s.DB("").C("products")
+	c := s.DB(db).C("users")
 	return c.EnsureIndex(i)
 }
 
@@ -100,4 +83,27 @@ func getURL() url.URL {
 		ur.User = u
 	}
 	return ur
+}
+
+// GetUserByName Get user by their name
+func (m *Mongo) GetUserByName(name string) (m_user.User, error) {
+	s := m.Session.Copy()
+	defer s.Close()
+	c := s.DB(db).C("users")
+	mu := New()
+	err := c.Find(bson.M{"username": name}).One(&mu)
+	return mu.User, err
+}
+
+// GetUser Get user by their object id
+func (m *Mongo) GetUser(id string) (m_user.User, error) {
+	s := m.Session.Copy()
+	defer s.Close()
+	if !bson.IsObjectIdHex(id) {
+		return m_user.New(), errors.New("Invalid Id Hex")
+	}
+	c := s.DB(db).C("users")
+	mu := New()
+	err := c.FindId(bson.ObjectIdHex(id)).One(&mu)
+	return mu.User, err
 }

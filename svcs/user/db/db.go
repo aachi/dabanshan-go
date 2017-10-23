@@ -5,13 +5,14 @@ import (
 	"flag"
 	"fmt"
 
-	m_product "github.com/laidingqing/dabanshan/svcs/product/model"
+	m_user "github.com/laidingqing/dabanshan/svcs/user/model"
 )
 
 // Database represents a simple interface so we can switch to a new system easily
 type Database interface {
 	Init() error
-	CreateProduct(*m_product.Product) error
+	GetUserByName(string) (m_user.User, error)
+	GetUser(string) (m_user.User, error)
 }
 
 var (
@@ -56,7 +57,18 @@ func Register(name string, db Database) {
 	DBTypes[name] = db
 }
 
-//CreateProduct invokes DefaultDb method
-func CreateProduct(p *m_product.Product) error {
-	return DefaultDb.CreateProduct(p)
+//GetUserByName invokes DefaultDb method
+func GetUserByName(n string) (m_user.User, error) {
+	u, err := DefaultDb.GetUserByName(n)
+	if err == nil {
+	}
+	return u, err
+}
+
+//GetUser invokes DefaultDb method
+func GetUser(n string) (m_user.User, error) {
+	u, err := DefaultDb.GetUser(n)
+	if err == nil {
+	}
+	return u, err
 }
