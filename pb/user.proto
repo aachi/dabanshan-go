@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package pb;
+
+
+message GetUserRequest{
+	string userid = 1;
+    int64 size = 2;
+}
+
+message GetUserResponse{
+    UserRecord v = 1;
+    string err = 2;
+}
+
+message UserRecord{
+    string firstname = 1;
+    string lastname = 2;
+    string username = 3;
+    string email = 4;
+    string password = 5;
+    string salt = 6;
+    string userid = 7;
+}
+
+service UserRpcService{
+	rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+}
+  

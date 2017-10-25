@@ -1,4 +1,4 @@
-package users
+package model
 
 import (
 	"crypto/sha1"
@@ -24,12 +24,14 @@ type User struct {
 	Salt      string `json:"-" bson:"salt"`
 }
 
+// New ..
 func New() User {
 	u := User{}
 	u.NewSalt()
 	return u
 }
 
+// Validate ..
 func (u *User) Validate() error {
 	if u.FirstName == "" {
 		return fmt.Errorf(ErrMissingField, "FirstName")
@@ -46,8 +48,30 @@ func (u *User) Validate() error {
 	return nil
 }
 
+// NewSalt ..
 func (u *User) NewSalt() {
 	h := sha1.New()
 	io.WriteString(h, strconv.Itoa(int(time.Now().UnixNano())))
 	u.Salt = fmt.Sprintf("%x", h.Sum(nil))
 }
+
+// Failer is an interface that should be implemented by response types.
+// Response encoders can check if responses are Failer, and if so if they've
+// failed, and if so encode them using a separate write path based on the error.
+type Failer interface {
+	Failed() error
+}
+
+// GetUserRequest collects the request parameters for the GetProducts method.
+type GetUserRequest struct {
+	A string
+}
+
+// GetUserResponse collects the response values for the GetProducts method.
+type GetUserResponse struct {
+	V   User  `json:"v"`
+	Err error `json:"-"` // should be intercepted by Failed/errorEncoder
+}
+
+// Failed implements Failer.
+func (r GetUserResponse) Failed() error { return r.Err }

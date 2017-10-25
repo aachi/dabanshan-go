@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package pb;
 
+
 enum ProductStatus {
     DRAFT = 0;
     PUBLISHED = 1;
@@ -25,8 +26,6 @@ message ProductRecord{
     int32 price = 4;
     ProductStatus status = 5;
 }
-
-message OkResponse {}
 
 service ProductRpcService{
 	rpc GetProducts(GetProductsRequest) returns (GetProductsResponse) {}

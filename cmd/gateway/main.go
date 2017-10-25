@@ -19,6 +19,8 @@ import (
 	p_endpoint "github.com/laidingqing/dabanshan/svcs/product/endpoint"
 	p_service "github.com/laidingqing/dabanshan/svcs/product/service"
 	p_transport "github.com/laidingqing/dabanshan/svcs/product/transport"
+
+	u_endpoint "github.com/laidingqing/dabanshan/svcs/user/endpoint"
 	stdopentracing "github.com/opentracing/opentracing-go"
 
 	"github.com/go-kit/kit/log"
@@ -77,6 +79,13 @@ func main() {
 			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			endpoints.GetProductsEndpoint = retry
+		}
+		{
+			factory := addsvcFactory(u_endpoint.MakeGetUserEndpoint, tracer, logger)
+			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			endpoints.GetUserEndpoint = retry
 		}
 		mux.Handle("/api/products", p_transport.NewHTTPHandler(endpoints, tracer, logger))
 		mux.HandleFunc("/api/echo", func(w http.ResponseWriter, r *http.Request) {
