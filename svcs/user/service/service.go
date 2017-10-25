@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
+	"github.com/laidingqing/dabanshan/svcs/user/db"
 	"github.com/laidingqing/dabanshan/svcs/user/model"
 )
 
@@ -48,8 +49,12 @@ func NewBasicService() Service {
 type basicService struct{}
 
 func (s basicService) GetUser(_ context.Context, id string) (model.GetUserResponse, error) {
+	us, err := db.GetUser(id)
+	if err != nil {
+		return model.GetUserResponse{V: model.New(), Err: nil}, err
+	}
 	return model.GetUserResponse{
-		V:   model.New(),
+		V:   us,
 		Err: nil,
 	}, nil
 }

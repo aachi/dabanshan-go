@@ -42,18 +42,19 @@ func NewHTTPHandler(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logg
 	)
 
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		logger.Log("params", r.FormValue("user"))
 		w.WriteHeader(http.StatusOK)
 	})
-	r.Handle("/api/users/:userid", getUserHandle).Methods("GET")
+	r.Handle("/api/v1/users/{id}", getUserHandle).Methods("GET")
 	return r
 }
 
 func decodeHTTPGetUserRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	// err := json.NewDecoder(r.Body).Decode(&req)
-	// todo convert params..
-	// a, _ := r.FormValue("userid")
-	return m_user.GetUserRequest{A: "aa"}, nil
+	vars := mux.Vars(r)
+	id, ok := vars["id"]
+	if !ok {
+		return nil, errors.New("bad route")
+	}
+	return m_user.GetUserRequest{A: id}, nil
 }
 
 func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {

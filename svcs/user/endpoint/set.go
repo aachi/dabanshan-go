@@ -35,6 +35,7 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 		getUserEndpoint = LoggingMiddleware(log.With(logger, "method", "GetUser"))(getUserEndpoint)
 		getUserEndpoint = InstrumentingMiddleware(duration.With("method", "GetUser"))(getUserEndpoint)
 	}
+
 	return Set{
 		GetUserEndpoint: getUserEndpoint,
 	}

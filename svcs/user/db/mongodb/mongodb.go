@@ -16,7 +16,7 @@ var (
 	name            string
 	password        string
 	host            string
-	db              = "products"
+	db              = "test"
 	ErrInvalidHexID = errors.New("Invalid Id Hex")
 )
 

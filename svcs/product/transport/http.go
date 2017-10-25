@@ -46,7 +46,7 @@ func NewHTTPHandler(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logg
 		logger.Log("params", r.FormValue("user"))
 		w.WriteHeader(http.StatusOK)
 	})
-	r.Handle("/api/products", listProductHandle).Methods("GET")
+	r.Handle("/api/v1/products/", listProductHandle).Methods("GET")
 	return r
 }
 

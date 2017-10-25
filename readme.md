@@ -1,0 +1,25 @@
+# Dabanshan-GoLang Project
+
+## dependency
+
+* consul as discover service
+* zipkin as trace service
+* use grpc and protobuf
+* use mongodb as database
+
+## services
+
+* svcs/product 
+* svcs/user
+
+## how debug ?
+
+* compile proto at "pb/Makefile"
+* "go run cmd/productsvc/main.go" for launch product service
+* "go run cmd/usersvcmain.go" for launch user service
+* "go run cmd/gateway/main.go" fro launch gateway api
+
+## debug example
+
+* GET "http://localhost:8000/api/v1/products?userid=233&size=10"
+* GET "http://localhost:8000/api/v1/users/59f05169668b9bcc7d442355"

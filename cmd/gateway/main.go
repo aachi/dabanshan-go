@@ -21,6 +21,8 @@ import (
 	p_transport "github.com/laidingqing/dabanshan/svcs/product/transport"
 
 	u_endpoint "github.com/laidingqing/dabanshan/svcs/user/endpoint"
+	u_service "github.com/laidingqing/dabanshan/svcs/user/service"
+	u_transport "github.com/laidingqing/dabanshan/svcs/user/transport"
 	stdopentracing "github.com/opentracing/opentracing-go"
 
 	"github.com/go-kit/kit/log"
@@ -68,27 +70,30 @@ func main() {
 	// products routes.
 	{
 		var (
-			tags        = []string{}
-			passingOnly = true
-			endpoints   = p_endpoint.Set{}
-			instancer   = consulsd.NewInstancer(client, logger, "productsvc", tags, passingOnly)
+			tags             = []string{}
+			passingOnly      = true
+			pEndpoints       = p_endpoint.Set{}
+			uEndpoints       = u_endpoint.Set{}
+			productInstancer = consulsd.NewInstancer(client, logger, "productsvc", tags, passingOnly)
+			userInstancer    = consulsd.NewInstancer(client, logger, "usersvc", tags, passingOnly)
 		)
 		{
-			factory := addsvcFactory(p_endpoint.MakeGetProductsEndpoint, tracer, logger)
-			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			productfactory := addProductFactory(p_endpoint.MakeGetProductsEndpoint, tracer, logger)
+			endpointer := sd.NewEndpointer(productInstancer, productfactory, logger)
 			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
-			endpoints.GetProductsEndpoint = retry
+			pEndpoints.GetProductsEndpoint = retry
 		}
 		{
-			factory := addsvcFactory(u_endpoint.MakeGetUserEndpoint, tracer, logger)
-			endpointer := sd.NewEndpointer(instancer, factory, logger)
+			userfactory := addUserFactory(u_endpoint.MakeGetUserEndpoint, tracer, logger)
+			endpointer := sd.NewEndpointer(userInstancer, userfactory, logger)
 			balancer := lb.NewRoundRobin(endpointer)
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
-			endpoints.GetUserEndpoint = retry
+			uEndpoints.GetUserEndpoint = retry
 		}
-		mux.Handle("/api/products", p_transport.NewHTTPHandler(endpoints, tracer, logger))
-		mux.HandleFunc("/api/echo", func(w http.ResponseWriter, r *http.Request) {
+		mux.Handle("/api/v1/products/", p_transport.NewHTTPHandler(pEndpoints, tracer, logger))
+		mux.Handle("/api/v1/users/", u_transport.NewHTTPHandler(uEndpoints, tracer, logger))
+		mux.HandleFunc("/api/v1/echo", func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.FormValue("user")))
 		})
 	}
@@ -124,13 +129,25 @@ func accessControl(h http.Handler) http.Handler {
 	})
 }
 
-func addsvcFactory(makeEndpoint func(p_service.Service) endpoint.Endpoint, tracer stdopentracing.Tracer, logger log.Logger) sd.Factory {
+func addProductFactory(makeEndpoint func(p_service.Service) endpoint.Endpoint, tracer stdopentracing.Tracer, logger log.Logger) sd.Factory {
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		conn, err := grpc.Dial(instance, grpc.WithInsecure())
 		if err != nil {
 			return nil, nil, err
 		}
 		service := p_transport.NewGRPCClient(conn, tracer, logger)
+		endpoint := makeEndpoint(service)
+		return endpoint, conn, nil
+	}
+}
+
+func addUserFactory(makeEndpoint func(u_service.Service) endpoint.Endpoint, tracer stdopentracing.Tracer, logger log.Logger) sd.Factory {
+	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
+		conn, err := grpc.Dial(instance, grpc.WithInsecure())
+		if err != nil {
+			return nil, nil, err
+		}
+		service := u_transport.NewGRPCClient(conn, tracer, logger)
 		endpoint := makeEndpoint(service)
 		return endpoint, conn, nil
 	}
