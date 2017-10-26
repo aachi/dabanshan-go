@@ -75,3 +75,17 @@ type GetUserResponse struct {
 
 // Failed implements Failer.
 func (r GetUserResponse) Failed() error { return r.Err }
+
+// RegisterRequest struct
+type RegisterRequest struct {
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	Email     string `json:"email"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+}
+
+// RegisterUserResponse ...
+type RegisterUserResponse struct {
+	ID string `json:"id"`
+}

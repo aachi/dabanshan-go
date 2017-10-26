@@ -20,13 +20,17 @@ import (
 // be used as a helper struct, to collect all of the endpoints into a single
 // parameter.
 type Set struct {
-	GetUserEndpoint endpoint.Endpoint
+	GetUserEndpoint  endpoint.Endpoint
+	RegisterEndpoint endpoint.Endpoint
 }
 
 // New returns a Set that wraps the provided server, and wires in all of the
 // expected endpoint middlewares via the various parameters.
 func New(svc service.Service, logger log.Logger, duration metrics.Histogram, trace stdopentracing.Tracer) Set {
-	var getUserEndpoint endpoint.Endpoint
+	var (
+		getUserEndpoint  endpoint.Endpoint
+		registerEndpoint endpoint.Endpoint
+	)
 	{
 		getUserEndpoint = MakeGetUserEndpoint(svc)
 		getUserEndpoint = ratelimit.NewTokenBucketLimiter(rl.NewBucketWithRate(1, 1))(getUserEndpoint)
@@ -35,14 +39,22 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 		getUserEndpoint = LoggingMiddleware(log.With(logger, "method", "GetUser"))(getUserEndpoint)
 		getUserEndpoint = InstrumentingMiddleware(duration.With("method", "GetUser"))(getUserEndpoint)
 	}
+	{
+		registerEndpoint = MakeRegisterEndpoint(svc)
+		registerEndpoint = ratelimit.NewTokenBucketLimiter(rl.NewBucketWithRate(1, 1))(registerEndpoint)
+		registerEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(registerEndpoint)
+		registerEndpoint = opentracing.TraceServer(trace, "Register")(registerEndpoint)
+		registerEndpoint = LoggingMiddleware(log.With(logger, "method", "Register"))(registerEndpoint)
+		registerEndpoint = InstrumentingMiddleware(duration.With("method", "Register"))(registerEndpoint)
+	}
 
 	return Set{
-		GetUserEndpoint: getUserEndpoint,
+		GetUserEndpoint:  getUserEndpoint,
+		RegisterEndpoint: registerEndpoint,
 	}
 }
 
 // GetUser implements the service interface, so Set may be used as a service.
-// This is primarily useful in the context of a client library.
 func (s Set) GetUser(ctx context.Context, a string) (m_user.GetUserResponse, error) {
 	resp, err := s.GetUserEndpoint(ctx, m_user.GetUserRequest{A: a})
 	if err != nil {
@@ -52,11 +64,30 @@ func (s Set) GetUser(ctx context.Context, a string) (m_user.GetUserResponse, err
 	return response, response.Err
 }
 
+// Register implements the service interface,
+func (s Set) Register(ctx context.Context, us m_user.RegisterRequest) (r m_user.RegisterUserResponse, err error) {
+	resp, err := s.RegisterEndpoint(ctx, us)
+	if err != nil {
+		return m_user.RegisterUserResponse{ID: ""}, err
+	}
+	response := resp.(m_user.RegisterUserResponse)
+	return response, err
+}
+
 // MakeGetUserEndpoint constructs a GetProducts endpoint wrapping the service.
 func MakeGetUserEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(m_user.GetUserRequest)
 		v, err := s.GetUser(ctx, req.A)
+		return v, err
+	}
+}
+
+// MakeRegisterEndpoint constructs a GetProducts endpoint wrapping the service.
+func MakeRegisterEndpoint(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(m_user.RegisterRequest)
+		v, err := s.Register(ctx, req)
 		return v, err
 	}
 }

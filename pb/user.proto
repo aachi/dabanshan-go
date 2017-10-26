@@ -13,6 +13,18 @@ message GetUserResponse{
     string err = 2;
 }
 
+message RegisterRequest{
+    string username  = 1;
+    string firstname = 2;
+    string lastname  = 3;
+    string email     = 4;
+    string password  = 5;
+}
+
+message RegisterResponse{
+    string id = 1;
+}
+
 message UserRecord{
     string firstname = 1;
     string lastname = 2;
@@ -25,5 +37,6 @@ message UserRecord{
 
 service UserRpcService{
 	rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+    rpc Register(RegisterRequest) returns (RegisterResponse) {}
 }
   

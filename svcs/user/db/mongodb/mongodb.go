@@ -17,6 +17,7 @@ var (
 	password        string
 	host            string
 	db              = "test"
+	collections     = "users"
 	ErrInvalidHexID = errors.New("Invalid Id Hex")
 )
 
@@ -62,13 +63,13 @@ func (m *Mongo) EnsureIndexes() error {
 	s := m.Session.Copy()
 	defer s.Close()
 	i := mgo.Index{
-		Key:        []string{"userid"},
+		Key:        []string{"username"},
 		Unique:     true,
 		DropDups:   true,
 		Background: true,
 		Sparse:     false,
 	}
-	c := s.DB(db).C("users")
+	c := s.DB(db).C(collections)
 	return c.EnsureIndex(i)
 }
 
@@ -89,10 +90,28 @@ func getURL() url.URL {
 func (m *Mongo) GetUserByName(name string) (m_user.User, error) {
 	s := m.Session.Copy()
 	defer s.Close()
-	c := s.DB(db).C("users")
+	c := s.DB(db).C(collections)
 	mu := New()
 	err := c.Find(bson.M{"username": name}).One(&mu)
 	return mu.User, err
+}
+
+// CreateUser Insert user to MongoDB
+func (m *Mongo) CreateUser(u *m_user.User) (string, error) {
+	s := m.Session.Copy()
+	defer s.Close()
+	id := bson.NewObjectId()
+	mu := New()
+	mu.User = *u
+	mu.ID = id
+	c := s.DB(db).C(collections)
+	_, err := c.UpsertId(mu.ID, mu)
+	if err != nil {
+		return "", err
+	}
+	mu.User.UserID = mu.ID.Hex()
+	*u = mu.User
+	return "", nil
 }
 
 // GetUser Get user by their object id

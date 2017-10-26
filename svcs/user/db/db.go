@@ -13,6 +13,7 @@ type Database interface {
 	Init() error
 	GetUserByName(string) (m_user.User, error)
 	GetUser(string) (m_user.User, error)
+	CreateUser(*m_user.User) (string, error)
 }
 
 var (
@@ -71,4 +72,9 @@ func GetUser(n string) (m_user.User, error) {
 	if err == nil {
 	}
 	return u, err
+}
+
+//CreateUser invokes DefaultDb method
+func CreateUser(u *m_user.User) (string, error) {
+	return DefaultDb.CreateUser(u)
 }

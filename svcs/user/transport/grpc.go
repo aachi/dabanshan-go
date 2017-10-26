@@ -24,7 +24,8 @@ import (
 )
 
 type grpcServer struct {
-	getuser grpctransport.Handler
+	getuser  grpctransport.Handler
+	register grpctransport.Handler
 }
 
 // NewGRPCServer ...
@@ -39,9 +40,16 @@ func NewGRPCServer(endpoints u_endpoint.Set, tracer stdopentracing.Tracer, logge
 			encodeGRPCGetUserResponse,
 			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "GetUser", logger)))...,
 		),
+		register: grpctransport.NewServer(
+			endpoints.RegisterEndpoint,
+			decodeGRPCRegisterRequest,
+			encodeGRPCRegisterResponse,
+			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "Register", logger)))...,
+		),
 	}
 }
 
+// GetUser RPC
 func (s *grpcServer) GetUser(ctx oldcontext.Context, req *pb.GetUserRequest) (*pb.GetUserResponse, error) {
 	_, rep, err := s.getuser.ServeGRPC(ctx, req)
 	if err != nil {
@@ -69,10 +77,39 @@ func encodeGRPCGetUserResponse(_ context.Context, response interface{}) (interfa
 	}, Err: err2str(resp.Err)}, nil
 }
 
+// Register RPC
+func (s *grpcServer) Register(ctx oldcontext.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
+	_, rep, err := s.register.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	res := rep.(*pb.RegisterResponse)
+	return res, nil
+}
+
+func decodeGRPCRegisterRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.RegisterRequest)
+	return m_user.RegisterRequest{
+		Username:  req.Username,
+		Password:  req.Password,
+		Email:     req.Email,
+		FirstName: req.Firstname,
+		LastName:  req.Lastname,
+	}, nil
+}
+
+func encodeGRPCRegisterResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(m_user.GetUserResponse)
+	return &pb.RegisterResponse{
+		Id: resp.V.UserID,
+	}, nil
+}
+
 // NewGRPCClient ...
 func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger log.Logger) service.Service {
 	limiter := ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(100, 100))
 	var getUserEndpoint endpoint.Endpoint
+	var registerEndpoint endpoint.Endpoint
 	{
 		getUserEndpoint = grpctransport.NewClient(
 			conn,
@@ -89,15 +126,43 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 			Name:    "GetUser",
 			Timeout: 30 * time.Second,
 		}))(getUserEndpoint)
+
+		registerEndpoint = grpctransport.NewClient(
+			conn,
+			"pb.UserRpcService",
+			"Register",
+			encodeGRPCRegisterRequest,
+			decodeGRPCRegisterResponse,
+			pb.RegisterResponse{},
+			grpctransport.ClientBefore(opentracing.ContextToGRPC(tracer, logger)),
+		).Endpoint()
+		registerEndpoint = opentracing.TraceClient(tracer, "Register")(registerEndpoint)
+		registerEndpoint = limiter(getUserEndpoint)
+		registerEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
+			Name:    "GetUser",
+			Timeout: 30 * time.Second,
+		}))(registerEndpoint)
 	}
 	return u_endpoint.Set{
-		GetUserEndpoint: getUserEndpoint,
+		GetUserEndpoint:  getUserEndpoint,
+		RegisterEndpoint: registerEndpoint,
 	}
 }
 
 func encodeGRPCGetUserRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(m_user.GetUserRequest)
 	return &pb.GetUserRequest{Userid: req.A}, nil
+}
+
+func encodeGRPCRegisterRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(m_user.RegisterRequest)
+	return &pb.RegisterRequest{
+		Username:  req.Username,
+		Firstname: req.FirstName,
+		Lastname:  req.LastName,
+		Email:     req.Email,
+		Password:  req.Password,
+	}, nil
 }
 
 func decodeGRPCGetUserResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
@@ -111,6 +176,13 @@ func decodeGRPCGetUserResponse(_ context.Context, grpcReply interface{}) (interf
 		Salt:      "",
 		UserID:    reply.V.Userid,
 	}, Err: str2err(reply.Err)}, nil
+}
+
+func decodeGRPCRegisterResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
+	reply := grpcReply.(*pb.RegisterResponse)
+	return m_user.RegisterUserResponse{
+		ID: reply.Id,
+	}, nil
 }
 
 func str2err(s string) error {

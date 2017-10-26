@@ -41,11 +41,29 @@ func NewHTTPHandler(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logg
 		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "GetUser", logger)))...,
 	)
 
+	registerHandle := httptransport.NewServer(
+		endpoints.GetUserEndpoint,
+		decodeHTTPRegisterRequest,
+		encodeHTTPGenericResponse,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "GetUser", logger)))...,
+	)
+
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	r.Handle("/api/v1/users/{id}", getUserHandle).Methods("GET")
+	r.Handle("/api/v1/users/", registerHandle).Methods("POST")
 	return r
+}
+
+func decodeHTTPRegisterRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	defer r.Body.Close()
+	a := m_user.RegisterRequest{}
+	err := json.NewDecoder(r.Body).Decode(&a)
+	if err != nil {
+		return nil, err
+	}
+	return a, nil
 }
 
 func decodeHTTPGetUserRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -90,7 +108,7 @@ type errorWrapper struct {
 
 func err2code(err error) int {
 	switch err {
-	case service.ErrTwoZeroes, service.ErrMaxSizeExceeded, service.ErrIntOverflow:
+	case service.ErrUserNotFound:
 		return http.StatusBadRequest
 	}
 	return http.StatusInternalServerError
