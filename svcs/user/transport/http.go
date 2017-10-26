@@ -42,7 +42,7 @@ func NewHTTPHandler(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logg
 	)
 
 	registerHandle := httptransport.NewServer(
-		endpoints.GetUserEndpoint,
+		endpoints.RegisterEndpoint,
 		decodeHTTPRegisterRequest,
 		encodeHTTPGenericResponse,
 		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "GetUser", logger)))...,

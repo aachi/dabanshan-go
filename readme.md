@@ -6,6 +6,7 @@
 * zipkin as trace service
 * use grpc and protobuf
 * use mongodb as database
+* some go libs
 
 ## services
 
@@ -14,6 +15,7 @@
 
 ## how debug ?
 
+* use "go get -v *" install go libs
 * compile proto at "pb/Makefile"
 * "go run cmd/productsvc/main.go" for launch product service
 * "go run cmd/usersvcmain.go" for launch user service

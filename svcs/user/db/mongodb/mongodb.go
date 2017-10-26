@@ -109,9 +109,7 @@ func (m *Mongo) CreateUser(u *m_user.User) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	mu.User.UserID = mu.ID.Hex()
-	*u = mu.User
-	return "", nil
+	return mu.ID.Hex(), nil
 }
 
 // GetUser Get user by their object id

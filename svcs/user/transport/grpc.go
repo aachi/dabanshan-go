@@ -99,9 +99,9 @@ func decodeGRPCRegisterRequest(_ context.Context, grpcReq interface{}) (interfac
 }
 
 func encodeGRPCRegisterResponse(_ context.Context, response interface{}) (interface{}, error) {
-	resp := response.(m_user.GetUserResponse)
+	resp := response.(m_user.RegisterUserResponse)
 	return &pb.RegisterResponse{
-		Id: resp.V.UserID,
+		Id: resp.ID,
 	}, nil
 }
 
@@ -137,7 +137,7 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 			grpctransport.ClientBefore(opentracing.ContextToGRPC(tracer, logger)),
 		).Endpoint()
 		registerEndpoint = opentracing.TraceClient(tracer, "Register")(registerEndpoint)
-		registerEndpoint = limiter(getUserEndpoint)
+		registerEndpoint = limiter(registerEndpoint)
 		registerEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
 			Name:    "GetUser",
 			Timeout: 30 * time.Second,
