@@ -14,9 +14,9 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/opentracing"
 	httptransport "github.com/go-kit/kit/transport/http"
-	p_endpoint "github.com/laidingqing/dabanshan/svcs/user/endpoint"
-	m_user "github.com/laidingqing/dabanshan/svcs/user/model"
-	"github.com/laidingqing/dabanshan/svcs/user/service"
+	o_endpoint "github.com/laidingqing/dabanshan/svcs/order/endpoint"
+	m_order "github.com/laidingqing/dabanshan/svcs/order/model"
+	"github.com/laidingqing/dabanshan/svcs/order/service"
 )
 
 var (
@@ -26,7 +26,7 @@ var (
 
 // NewHTTPHandler returns an HTTP handler that makes a set of endpoints
 // available on predefined paths.
-func NewHTTPHandler(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logger log.Logger) http.Handler {
+func NewHTTPHandler(endpoints o_endpoint.Set, tracer stdopentracing.Tracer, logger log.Logger) http.Handler {
 	options := []httptransport.ServerOption{
 		httptransport.ServerErrorEncoder(errorEncoder),
 		httptransport.ServerErrorLogger(logger),
@@ -35,58 +35,23 @@ func NewHTTPHandler(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logg
 	r := mux.NewRouter()
 	//authenticationMiddleware := authorize.ValidateTokenMiddleware()
 
-	getUserHandle := httptransport.NewServer(
-		endpoints.GetUserEndpoint,
-		decodeHTTPGetUserRequest,
+	createOrderHandle := httptransport.NewServer(
+		endpoints.CreateOrderEndpoint,
+		decodeHTTPCreateOrderRequest,
 		encodeHTTPGenericResponse,
-		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "GetUser", logger)))...,
-	)
-
-	registerHandle := httptransport.NewServer(
-		endpoints.RegisterEndpoint,
-		decodeHTTPRegisterRequest,
-		encodeHTTPGenericResponse,
-		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "GetUser", logger)))...,
-	)
-
-	loginHandle := httptransport.NewServer(
-		endpoints.LoginEndpoint,
-		decodeHTTPLoginRequest,
-		encodeHTTPGenericResponse,
-		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "Login", logger)))...,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "CreateOrder", logger)))...,
 	)
 
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	r.Handle("/api/v1/users/{id}", getUserHandle).Methods("GET")
-	r.Handle("/api/v1/users/", registerHandle).Methods("POST")
-	r.Handle("/api/v1/users/login", loginHandle).Methods("POST")
+	r.Handle("/api/v1/orders/", createOrderHandle).Methods("POST")
 	return r
 }
 
-func decodeHTTPRegisterRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeHTTPCreateOrderRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	defer r.Body.Close()
-	a := m_user.RegisterRequest{}
-	err := json.NewDecoder(r.Body).Decode(&a)
-	if err != nil {
-		return nil, err
-	}
-	return a, nil
-}
-
-func decodeHTTPGetUserRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	id, ok := vars["id"]
-	if !ok {
-		return nil, errors.New("bad route")
-	}
-	return m_user.GetUserRequest{A: id}, nil
-}
-
-func decodeHTTPLoginRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	defer r.Body.Close()
-	a := m_user.LoginRequest{}
+	a := m_order.CreateOrderRequest{}
 	err := json.NewDecoder(r.Body).Decode(&a)
 	if err != nil {
 		return nil, err
@@ -113,7 +78,7 @@ func encodeHTTPGenericRequest(_ context.Context, r *http.Request, request interf
 // encodeHTTPGenericResponse is a transport/http.EncodeResponseFunc that encodes
 // the response as JSON to the response writer. Primarily useful in a server.
 func encodeHTTPGenericResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if f, ok := response.(m_user.Failer); ok && f.Failed() != nil {
+	if f, ok := response.(m_order.Failer); ok && f.Failed() != nil {
 		errorEncoder(ctx, f.Failed(), w)
 		return nil
 	}
@@ -127,7 +92,7 @@ type errorWrapper struct {
 
 func err2code(err error) int {
 	switch err {
-	case service.ErrUserNotFound, service.ErrUserAlreadyExisting:
+	case service.ErrOrderNotFound:
 		return http.StatusBadRequest
 	}
 	return http.StatusInternalServerError

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package pb;
+
+message CreateOrderRequest{
+    float amount = 1;
+}
+
+message CreatedOrderResponse{
+    string id = 1;
+    string err = 2;
+}
+
+service OrderRpcService{
+	rpc CreateOrder(CreateOrderRequest) returns (CreatedOrderResponse) {}
+}
