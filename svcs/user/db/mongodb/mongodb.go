@@ -93,6 +93,7 @@ func (m *Mongo) GetUserByName(name string) (m_user.User, error) {
 	c := s.DB(db).C(collections)
 	mu := New()
 	err := c.Find(bson.M{"username": name}).One(&mu)
+	mu.UserID = mu.ID.Hex()
 	return mu.User, err
 }
 
@@ -122,5 +123,6 @@ func (m *Mongo) GetUser(id string) (m_user.User, error) {
 	c := s.DB(db).C("users")
 	mu := New()
 	err := c.FindId(bson.ObjectIdHex(id)).One(&mu)
+	mu.UserID = mu.ID.Hex()
 	return mu.User, err
 }

@@ -98,6 +98,13 @@ func main() {
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			uEndpoints.RegisterEndpoint = retry
 		}
+		{
+			userfactory := addUserFactory(u_endpoint.MakeLoginEndpoint, tracer, logger)
+			endpointer := sd.NewEndpointer(userInstancer, userfactory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			uEndpoints.LoginEndpoint = retry
+		}
 		mux.Handle("/api/v1/products/", p_transport.NewHTTPHandler(pEndpoints, tracer, logger))
 		mux.Handle("/api/v1/users/", u_transport.NewHTTPHandler(uEndpoints, tracer, logger))
 		mux.HandleFunc("/api/v1/echo", func(w http.ResponseWriter, r *http.Request) {

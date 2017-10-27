@@ -70,7 +70,7 @@ type GetUserRequest struct {
 // GetUserResponse collects the response values for the GetProducts method.
 type GetUserResponse struct {
 	V   User  `json:"v"`
-	Err error `json:"-"` // should be intercepted by Failed/errorEncoder
+	Err error `json:"err,omitempty"` // should be intercepted by Failed/errorEncoder
 }
 
 // Failed implements Failer.
@@ -87,5 +87,19 @@ type RegisterRequest struct {
 
 // RegisterUserResponse ...
 type RegisterUserResponse struct {
-	ID string `json:"id"`
+	ID  string `json:"id"`
+	Err error  `json:"-"`
+}
+
+// LoginRequest ..
+type LoginRequest struct {
+	Username string
+	Password string
+}
+
+// LoginResponse ..
+type LoginResponse struct {
+	User  *User  `json:"user,omitempty"`
+	Token string `json:"token,omitempty"`
+	Err   error  `json:"err,omitempty"`
 }

@@ -36,6 +36,13 @@ func (mw loggingMiddleware) Register(ctx context.Context, us model.RegisterReque
 	return mw.next.Register(ctx, us)
 }
 
+func (mw loggingMiddleware) Login(ctx context.Context, login model.LoginRequest) (r model.LoginResponse, err error) {
+	defer func() {
+		mw.logger.Log("method", "Login", "err", err)
+	}()
+	return mw.next.Login(ctx, login)
+}
+
 // InstrumentingMiddleware ..
 func InstrumentingMiddleware(ints, chars metrics.Counter) Middleware {
 	return func(next Service) Service {
@@ -60,5 +67,10 @@ func (mw instrumentingMiddleware) GetUser(ctx context.Context, a string) (model.
 
 func (mw instrumentingMiddleware) Register(ctx context.Context, us model.RegisterRequest) (r model.RegisterUserResponse, err error) {
 	v, err := mw.next.Register(ctx, us)
+	return v, err
+}
+
+func (mw instrumentingMiddleware) Login(ctx context.Context, login model.LoginRequest) (r model.LoginResponse, err error) {
+	v, err := mw.next.Login(ctx, login)
 	return v, err
 }

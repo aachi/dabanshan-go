@@ -22,6 +22,7 @@ import (
 type Set struct {
 	GetUserEndpoint  endpoint.Endpoint
 	RegisterEndpoint endpoint.Endpoint
+	LoginEndpoint    endpoint.Endpoint
 }
 
 // New returns a Set that wraps the provided server, and wires in all of the
@@ -30,6 +31,7 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 	var (
 		getUserEndpoint  endpoint.Endpoint
 		registerEndpoint endpoint.Endpoint
+		loginEndpoint    endpoint.Endpoint
 	)
 	{
 		getUserEndpoint = MakeGetUserEndpoint(svc)
@@ -47,10 +49,19 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 		registerEndpoint = LoggingMiddleware(log.With(logger, "method", "Register"))(registerEndpoint)
 		registerEndpoint = InstrumentingMiddleware(duration.With("method", "Register"))(registerEndpoint)
 	}
+	{
+		loginEndpoint = MakeLoginEndpoint(svc)
+		loginEndpoint = ratelimit.NewTokenBucketLimiter(rl.NewBucketWithRate(1, 1))(loginEndpoint)
+		loginEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(loginEndpoint)
+		loginEndpoint = opentracing.TraceServer(trace, "Login")(loginEndpoint)
+		loginEndpoint = LoggingMiddleware(log.With(logger, "method", "Login"))(loginEndpoint)
+		loginEndpoint = InstrumentingMiddleware(duration.With("method", "Login"))(loginEndpoint)
+	}
 
 	return Set{
 		GetUserEndpoint:  getUserEndpoint,
 		RegisterEndpoint: registerEndpoint,
+		LoginEndpoint:    loginEndpoint,
 	}
 }
 
@@ -74,7 +85,17 @@ func (s Set) Register(ctx context.Context, us m_user.RegisterRequest) (r m_user.
 	return response, err
 }
 
-// MakeGetUserEndpoint constructs a GetProducts endpoint wrapping the service.
+// Login implements the service interface.
+func (s Set) Login(ctx context.Context, login m_user.LoginRequest) (m_user.LoginResponse, error) {
+	resp, err := s.LoginEndpoint(ctx, login)
+	if err != nil {
+		return m_user.LoginResponse{}, err
+	}
+	response := resp.(m_user.LoginResponse)
+	return response, err
+}
+
+// MakeGetUserEndpoint constructs a GetUser endpoint wrapping the service.
 func MakeGetUserEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(m_user.GetUserRequest)
@@ -83,11 +104,20 @@ func MakeGetUserEndpoint(s service.Service) endpoint.Endpoint {
 	}
 }
 
-// MakeRegisterEndpoint constructs a GetProducts endpoint wrapping the service.
+// MakeRegisterEndpoint constructs a Register endpoint wrapping the service.
 func MakeRegisterEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(m_user.RegisterRequest)
 		v, err := s.Register(ctx, req)
+		return v, err
+	}
+}
+
+// MakeLoginEndpoint constructs a Login endpoint wrapping the service.
+func MakeLoginEndpoint(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(m_user.LoginRequest)
+		v, err := s.Login(ctx, req)
 		return v, err
 	}
 }

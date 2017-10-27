@@ -48,11 +48,19 @@ func NewHTTPHandler(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logg
 		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "GetUser", logger)))...,
 	)
 
+	loginHandle := httptransport.NewServer(
+		endpoints.LoginEndpoint,
+		decodeHTTPLoginRequest,
+		encodeHTTPGenericResponse,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "Login", logger)))...,
+	)
+
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	r.Handle("/api/v1/users/{id}", getUserHandle).Methods("GET")
 	r.Handle("/api/v1/users/", registerHandle).Methods("POST")
+	r.Handle("/api/v1/users/login", loginHandle).Methods("POST")
 	return r
 }
 
@@ -73,6 +81,16 @@ func decodeHTTPGetUserRequest(_ context.Context, r *http.Request) (interface{}, 
 		return nil, errors.New("bad route")
 	}
 	return m_user.GetUserRequest{A: id}, nil
+}
+
+func decodeHTTPLoginRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	defer r.Body.Close()
+	a := m_user.LoginRequest{}
+	err := json.NewDecoder(r.Body).Decode(&a)
+	if err != nil {
+		return nil, err
+	}
+	return a, nil
 }
 
 func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {
@@ -108,7 +126,7 @@ type errorWrapper struct {
 
 func err2code(err error) int {
 	switch err {
-	case service.ErrUserNotFound:
+	case service.ErrUserNotFound, service.ErrUserAlreadyExisting:
 		return http.StatusBadRequest
 	}
 	return http.StatusInternalServerError

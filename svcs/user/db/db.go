@@ -62,6 +62,7 @@ func Register(name string, db Database) {
 func GetUserByName(n string) (m_user.User, error) {
 	u, err := DefaultDb.GetUserByName(n)
 	if err == nil {
+
 	}
 	return u, err
 }

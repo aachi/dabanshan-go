@@ -23,6 +23,18 @@ message RegisterRequest{
 
 message RegisterResponse{
     string id = 1;
+    string err = 2;
+}
+
+message LoginRequest{
+    string username = 1;
+    string password = 2;
+}
+
+message LoginResponse{
+    UserRecord  user = 1;
+    string      token = 2;
+    string      err = 3;
 }
 
 message UserRecord{
@@ -38,5 +50,6 @@ message UserRecord{
 service UserRpcService{
 	rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
     rpc Register(RegisterRequest) returns (RegisterResponse) {}
+    rpc Login(LoginRequest) returns (LoginResponse) {}
 }
   

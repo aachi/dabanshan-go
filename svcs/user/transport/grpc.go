@@ -5,8 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"google.golang.org/grpc"
-
 	"github.com/go-kit/kit/circuitbreaker"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
@@ -21,11 +19,13 @@ import (
 	stdopentracing "github.com/opentracing/opentracing-go"
 	"github.com/sony/gobreaker"
 	oldcontext "golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 type grpcServer struct {
 	getuser  grpctransport.Handler
 	register grpctransport.Handler
+	login    grpctransport.Handler
 }
 
 // NewGRPCServer ...
@@ -45,6 +45,12 @@ func NewGRPCServer(endpoints u_endpoint.Set, tracer stdopentracing.Tracer, logge
 			decodeGRPCRegisterRequest,
 			encodeGRPCRegisterResponse,
 			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "Register", logger)))...,
+		),
+		login: grpctransport.NewServer(
+			endpoints.LoginEndpoint,
+			decodeGRPCLoginRequest,
+			encodeGRPCLoginResponse,
+			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "Login", logger)))...,
 		),
 	}
 }
@@ -101,7 +107,34 @@ func decodeGRPCRegisterRequest(_ context.Context, grpcReq interface{}) (interfac
 func encodeGRPCRegisterResponse(_ context.Context, response interface{}) (interface{}, error) {
 	resp := response.(m_user.RegisterUserResponse)
 	return &pb.RegisterResponse{
-		Id: resp.ID,
+		Id:  resp.ID,
+		Err: err2str(resp.Err),
+	}, nil
+}
+
+func (s *grpcServer) Login(ctx oldcontext.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
+	_, rep, err := s.login.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	res := rep.(*pb.LoginResponse)
+	return res, nil
+}
+
+func decodeGRPCLoginRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.LoginRequest)
+	return m_user.LoginRequest{
+		Username: req.Username,
+		Password: req.Password,
+	}, nil
+}
+
+func encodeGRPCLoginResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(m_user.LoginResponse)
+	return &pb.LoginResponse{
+		User:  modelUser2PbUser(*resp.User),
+		Token: resp.Token,
+		Err:   err2str(resp.Err),
 	}, nil
 }
 
@@ -110,6 +143,7 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 	limiter := ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(100, 100))
 	var getUserEndpoint endpoint.Endpoint
 	var registerEndpoint endpoint.Endpoint
+	var loginEndPoint endpoint.Endpoint
 	{
 		getUserEndpoint = grpctransport.NewClient(
 			conn,
@@ -142,10 +176,27 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 			Name:    "GetUser",
 			Timeout: 30 * time.Second,
 		}))(registerEndpoint)
+
+		loginEndPoint = grpctransport.NewClient(
+			conn,
+			"pb.UserRpcService",
+			"Login",
+			encodeGRPCLoginRequest,
+			decodeGRPCLoginResponse,
+			pb.LoginResponse{},
+			grpctransport.ClientBefore(opentracing.ContextToGRPC(tracer, logger)),
+		).Endpoint()
+		loginEndPoint = opentracing.TraceClient(tracer, "Login")(loginEndPoint)
+		loginEndPoint = limiter(loginEndPoint)
+		loginEndPoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
+			Name:    "Login",
+			Timeout: 30 * time.Second,
+		}))(loginEndPoint)
 	}
 	return u_endpoint.Set{
 		GetUserEndpoint:  getUserEndpoint,
 		RegisterEndpoint: registerEndpoint,
+		LoginEndpoint:    loginEndPoint,
 	}
 }
 
@@ -165,6 +216,14 @@ func encodeGRPCRegisterRequest(_ context.Context, request interface{}) (interfac
 	}, nil
 }
 
+func encodeGRPCLoginRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(m_user.LoginRequest)
+	return &pb.LoginRequest{
+		Username: req.Username,
+		Password: req.Password,
+	}, nil
+}
+
 func decodeGRPCGetUserResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
 	reply := grpcReply.(*pb.GetUserResponse)
 	return m_user.GetUserResponse{V: m_user.User{
@@ -172,7 +231,7 @@ func decodeGRPCGetUserResponse(_ context.Context, grpcReply interface{}) (interf
 		LastName:  reply.V.Lastname,
 		Email:     reply.V.Email,
 		Username:  reply.V.Username,
-		Password:  "",
+		Password:  reply.V.Password,
 		Salt:      "",
 		UserID:    reply.V.Userid,
 	}, Err: str2err(reply.Err)}, nil
@@ -181,7 +240,16 @@ func decodeGRPCGetUserResponse(_ context.Context, grpcReply interface{}) (interf
 func decodeGRPCRegisterResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
 	reply := grpcReply.(*pb.RegisterResponse)
 	return m_user.RegisterUserResponse{
-		ID: reply.Id,
+		ID:  reply.Id,
+		Err: str2err(reply.Err),
+	}, nil
+}
+
+func decodeGRPCLoginResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
+	reply, _ := grpcReply.(*pb.LoginResponse)
+	return m_user.LoginResponse{
+		User:  pbUser2ModelUser(*reply.User),
+		Token: reply.Token,
 	}, nil
 }
 
@@ -197,4 +265,26 @@ func err2str(err error) string {
 		return ""
 	}
 	return err.Error()
+}
+
+func pbUser2ModelUser(record pb.UserRecord) *m_user.User {
+	return &m_user.User{
+		Username:  record.Username,
+		Email:     record.Email,
+		Password:  record.Password,
+		FirstName: record.Firstname,
+		LastName:  record.Lastname,
+		UserID:    record.Userid,
+	}
+}
+
+func modelUser2PbUser(model m_user.User) *pb.UserRecord {
+	return &pb.UserRecord{
+		Username:  model.Username,
+		Email:     model.Email,
+		Password:  model.Password,
+		Firstname: model.FirstName,
+		Lastname:  model.LastName,
+		Userid:    model.UserID,
+	}
 }
