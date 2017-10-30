@@ -36,6 +36,7 @@ func main() {
 		consulAddr   = flag.String("consul.addr", "localhost:8500", "Consul agent address")
 		retryMax     = flag.Int("retry.max", 3, "per-request retries to different instances")
 		retryTimeout = flag.Duration("retry.timeout", 500*time.Millisecond, "per-request timeout, including retries")
+		staticDir    = flag.String("static_dir", "/statics", "static directory in addition to default static directory")
 	)
 	flag.Parse()
 
@@ -107,6 +108,8 @@ func main() {
 		}
 		mux.Handle("/api/v1/products/", p_transport.NewHTTPHandler(pEndpoints, tracer, logger))
 		mux.Handle("/api/v1/users/", u_transport.NewHTTPHandler(uEndpoints, tracer, logger))
+		// Setup static routes
+		mux.Handle("/", http.FileServer(http.Dir(*staticDir)))
 		mux.HandleFunc("/api/v1/echo", func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.FormValue("user")))
 		})
