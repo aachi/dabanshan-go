@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"html"
 	"io"
 	"net/http"
 	"os"
@@ -11,14 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"google.golang.org/grpc"
-
 	"github.com/go-kit/kit/endpoint"
 	consulsd "github.com/go-kit/kit/sd/consul"
 	"github.com/hashicorp/consul/api"
 	p_endpoint "github.com/laidingqing/dabanshan/svcs/product/endpoint"
 	p_service "github.com/laidingqing/dabanshan/svcs/product/service"
 	p_transport "github.com/laidingqing/dabanshan/svcs/product/transport"
+	"google.golang.org/grpc"
 
 	u_endpoint "github.com/laidingqing/dabanshan/svcs/user/endpoint"
 	u_service "github.com/laidingqing/dabanshan/svcs/user/service"
@@ -36,7 +34,7 @@ func main() {
 		consulAddr   = flag.String("consul.addr", "localhost:8500", "Consul agent address")
 		retryMax     = flag.Int("retry.max", 3, "per-request retries to different instances")
 		retryTimeout = flag.Duration("retry.timeout", 500*time.Millisecond, "per-request timeout, including retries")
-		staticDir    = flag.String("static_dir", "/statics", "static directory in addition to default static directory")
+		//staticDir    = flag.String("static_dir", "/public", "static directory in addition to default static directory")
 	)
 	flag.Parse()
 
@@ -108,13 +106,9 @@ func main() {
 		}
 		mux.Handle("/api/v1/products/", p_transport.NewHTTPHandler(pEndpoints, tracer, logger))
 		mux.Handle("/api/v1/users/", u_transport.NewHTTPHandler(uEndpoints, tracer, logger))
-		// Setup static routes
-		mux.Handle("/", http.FileServer(http.Dir(*staticDir)))
-		mux.HandleFunc("/api/v1/echo", func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.FormValue("user")))
-		})
 	}
 	http.Handle("/", accessControl(mux))
+	//http.Handle("/static/", staticServer(mux, *staticDir))
 	// Interrupt handler.
 	errc := make(chan error, 2)
 	go func() {
@@ -126,7 +120,7 @@ func main() {
 	// HTTP transport.
 	go func() {
 		logger.Log("transport", "HTTP", "addr", *httpAddr)
-		errc <- http.ListenAndServe(*httpAddr, nil)
+		errc <- http.ListenAndServe(*httpAddr, mux)
 	}()
 
 	// Run!

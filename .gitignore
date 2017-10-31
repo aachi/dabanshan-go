@@ -13,6 +13,6 @@ bin
 
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
-statics/node_modules
+public/node_modules
 
 .vscode/settings.json
