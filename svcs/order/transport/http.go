@@ -42,10 +42,19 @@ func NewHTTPHandler(endpoints o_endpoint.Set, tracer stdopentracing.Tracer, logg
 		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "CreateOrder", logger)))...,
 	)
 
+	getOrderHandle := httptransport.NewServer(
+		endpoints.GetOrdersEndpoint,
+		decodeHTTPGetOrdersRequest,
+		encodeHTTPGenericResponse,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "GetOrders", logger)))...,
+	)
+
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	r.Handle("/api/v1/orders/", createOrderHandle).Methods("POST")
+	r.Handle("/api/v1/orders/", createOrderHandle).Methods("POST") //创建订单
+	r.Handle("/api/v1/orders/{id}/", nil).Methods("POST")          //更新订单项
+	r.Handle("/api/v1/orders/", getOrderHandle).Methods("GET")     //查询用户订单订单项 ?userId=xxxx
 	return r
 }
 
@@ -55,6 +64,15 @@ func decodeHTTPCreateOrderRequest(_ context.Context, r *http.Request) (interface
 	err := json.NewDecoder(r.Body).Decode(&a)
 	if err != nil {
 		return nil, err
+	}
+	return a, nil
+}
+
+func decodeHTTPGetOrdersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, _ := vars["userId"]
+	a := m_order.GetOrdersRequest{
+		UserID: id,
 	}
 	return a, nil
 }

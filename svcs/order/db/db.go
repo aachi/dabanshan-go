@@ -12,6 +12,7 @@ import (
 type Database interface {
 	Init() error
 	CreateOrder(*m_order.Invoice) (string, error)
+	GetOrders(usrID string) ([]m_order.Invoice, error)
 }
 
 var (
@@ -59,4 +60,9 @@ func Register(name string, db Database) {
 // CreateOrder db operator
 func CreateOrder(mo *m_order.Invoice) (string, error) {
 	return DefaultDb.CreateOrder(mo)
+}
+
+// GetOrders ...
+func GetOrders(usrID string) ([]m_order.Invoice, error) {
+	return DefaultDb.GetOrders(usrID)
 }

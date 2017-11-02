@@ -29,10 +29,21 @@ type CreateOrderRequest struct {
 	Amount float32 `json:"amount"`
 }
 
+// GetOrdersRequest struct
+type GetOrdersRequest struct {
+	UserID string `json:"userID"`
+}
+
 // CreatedOrderResponse ...
 type CreatedOrderResponse struct {
 	ID  string `json:"id"`
 	Err error  `json:"-"`
+}
+
+// GetOrdersResponse ...
+type GetOrdersResponse struct {
+	Orders []Invoice `json:"orders"`
+	Err    error     `json:"-"`
 }
 
 type Failer interface {

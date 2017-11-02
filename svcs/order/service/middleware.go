@@ -29,6 +29,13 @@ func (mw loggingMiddleware) CreateOrder(ctx context.Context, a model.CreateOrder
 	return mw.next.CreateOrder(ctx, a)
 }
 
+func (mw loggingMiddleware) GetOrders(ctx context.Context, a model.GetOrdersRequest) (v model.GetOrdersResponse, err error) {
+	defer func() {
+		mw.logger.Log("method", "CreateOrder", "err", err)
+	}()
+	return mw.next.GetOrders(ctx, a)
+}
+
 // InstrumentingMiddleware ..
 func InstrumentingMiddleware(ints, chars metrics.Counter) Middleware {
 	return func(next Service) Service {
@@ -48,5 +55,10 @@ type instrumentingMiddleware struct {
 
 func (mw instrumentingMiddleware) CreateOrder(ctx context.Context, a model.CreateOrderRequest) (model.CreatedOrderResponse, error) {
 	v, err := mw.next.CreateOrder(ctx, a)
+	return v, err
+}
+
+func (mw instrumentingMiddleware) GetOrders(ctx context.Context, a model.GetOrdersRequest) (model.GetOrdersResponse, error) {
+	v, err := mw.next.GetOrders(ctx, a)
 	return v, err
 }

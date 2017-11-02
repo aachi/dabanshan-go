@@ -2,6 +2,18 @@ syntax = "proto3";
 
 package pb;
 
+
+message InvoiceRecord{
+    string amount = 1;
+    string userid = 2;
+    repeated OrderItemRecord items = 3;
+}
+
+message OrderItemRecord{
+    string productid = 1;
+    string price = 2;
+}
+
 message CreateOrderRequest{
     float amount = 1;
 }
@@ -11,6 +23,16 @@ message CreatedOrderResponse{
     string err = 2;
 }
 
+message GetOrdersRequest{
+    string userid = 1;
+}
+
+message GetOrdersResponse{
+    repeated InvoiceRecord invoices = 1;
+    string err = 2;
+}
+
 service OrderRpcService{
 	rpc CreateOrder(CreateOrderRequest) returns (CreatedOrderResponse) {}
+    rpc GetOrders(GetOrdersRequest) returns (GetOrdersResponse) {}
 }

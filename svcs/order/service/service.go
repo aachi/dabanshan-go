@@ -18,6 +18,7 @@ var (
 // Service describes a service that adds things together.
 type Service interface {
 	CreateOrder(ctx context.Context, order model.CreateOrderRequest) (model.CreatedOrderResponse, error)
+	GetOrders(ctx context.Context, req model.GetOrdersRequest) (model.GetOrdersResponse, error)
 }
 
 // New returns a basic Service with all of the expected middlewares wired in.
@@ -54,5 +55,17 @@ func (s basicService) CreateOrder(_ context.Context, order model.CreateOrderRequ
 	return model.CreatedOrderResponse{
 		ID:  id,
 		Err: nil,
+	}, nil
+}
+
+// GetOrders get orders by user id
+func (s basicService) GetOrders(ctx context.Context, req model.GetOrdersRequest) (model.GetOrdersResponse, error) {
+	orders, err := db.GetOrders(req.UserID)
+	if err != nil {
+		return model.GetOrdersResponse{Err: err}, err
+	}
+	return model.GetOrdersResponse{
+		Orders: orders,
+		Err:    nil,
 	}, nil
 }

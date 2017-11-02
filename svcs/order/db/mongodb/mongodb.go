@@ -86,7 +86,7 @@ func getURL() url.URL {
 	return ur
 }
 
-// CreateUser Insert user to MongoDB
+// CreateOrder Insert user to MongoDB
 func (m *Mongo) CreateOrder(u *m_order.Invoice) (string, error) {
 	s := m.Session.Copy()
 	defer s.Close()
@@ -100,4 +100,18 @@ func (m *Mongo) CreateOrder(u *m_order.Invoice) (string, error) {
 		return "", err
 	}
 	return mu.ID.Hex(), nil
+}
+
+// GetOrders 根据用户查询订单列表.
+func (m *Mongo) GetOrders(usrID string) ([]m_order.Invoice, error) {
+	s := m.Session.Copy()
+	defer s.Close()
+	c := s.DB(db).C(collections)
+	var orders []m_order.Invoice
+	err := c.Find(bson.M{"userId": usrID}).All(&orders)
+
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
 }
