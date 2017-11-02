@@ -1,7 +1,6 @@
 package mongodb
 
 import (
-	"errors"
 	"flag"
 	"net/url"
 	"time"
@@ -12,11 +11,11 @@ import (
 )
 
 var (
-	name            string
-	password        string
-	host            string
-	db              = "test"
-	ErrInvalidHexID = errors.New("Invalid Id Hex")
+	name        string
+	password    string
+	host        string
+	db          = "test"
+	collections = "products"
 )
 
 func init() {
@@ -50,12 +49,12 @@ func (m *Mongo) CreateProduct(p *m_product.Product) error {
 	mp := New()
 	mp.Product = *p
 	mp.ID = id
-	c := s.DB(db).C("products")
+	c := s.DB(db).C(collections)
 	_, err := c.UpsertId(mp.ID, mp)
 	if err != nil {
 		return err
 	}
-	mp.Product.ProductID = mp.ID.Hex()
+	mp.Product.ID = mp.ID.Hex()
 	*p = mp.Product
 	return nil
 }
@@ -85,7 +84,7 @@ func (m *Mongo) EnsureIndexes() error {
 		Background: true,
 		Sparse:     false,
 	}
-	c := s.DB("").C("products")
+	c := s.DB(db).C(collections)
 	return c.EnsureIndex(i)
 }
 

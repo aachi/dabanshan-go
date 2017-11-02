@@ -17,6 +17,7 @@
 
 * use "go get -v *" install go libs
 * compile proto at "pb/Makefile"
+* download and launch consul as default discover service.
 * "go run cmd/productsvc/main.go" for launch product service
 * "go run cmd/usersvcmain.go" for launch user service
 * "go run cmd/gateway/main.go" fro launch gateway api
