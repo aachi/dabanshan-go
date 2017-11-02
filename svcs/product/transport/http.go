@@ -46,7 +46,10 @@ func NewHTTPHandler(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logg
 		logger.Log("params", r.FormValue("user"))
 		w.WriteHeader(http.StatusOK)
 	})
-	r.Handle("/api/v1/products/", listProductHandle).Methods("GET")
+	r.Handle("/api/v1/products/", listProductHandle).Methods("GET") //获取所有商品，包含按条件分页:catalogID=?
+	r.Handle("/api/v1/products/{id}", nil).Methods("GET")           //根据ID获取指定商品
+	r.Handle("/api/v1/products/{id}", nil).Methods("DELETE")        //下架指定商品
+	r.Handle("/api/v1/products/{id}", nil).Methods("PUT")           //修改指定商品
 	return r
 }
 
