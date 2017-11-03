@@ -19,6 +19,7 @@ var (
 type Service interface {
 	CreateOrder(ctx context.Context, order model.CreateOrderRequest) (model.CreatedOrderResponse, error)
 	GetOrders(ctx context.Context, req model.GetOrdersRequest) (model.GetOrdersResponse, error)
+	AddCart(ctx context.Context, req model.CreateCartRequest) (model.CreatedCartResponse, error)
 }
 
 // New returns a basic Service with all of the expected middlewares wired in.
@@ -67,5 +68,22 @@ func (s basicService) GetOrders(ctx context.Context, req model.GetOrdersRequest)
 	return model.GetOrdersResponse{
 		Orders: orders,
 		Err:    nil,
+	}, nil
+}
+
+// GetUser get user by id
+func (s basicService) AddCart(_ context.Context, order model.CreateCartRequest) (model.CreatedCartResponse, error) {
+	c := model.Cart{}
+	c.Price = order.Price
+	c.ProductID = order.ProductID
+	c.UserID = order.UserID
+	// TODO 校验等
+	id, err := db.AddCart(&c)
+	if err != nil {
+		return model.CreatedCartResponse{ID: "", Err: err}, err
+	}
+	return model.CreatedCartResponse{
+		ID:  id,
+		Err: nil,
 	}, nil
 }

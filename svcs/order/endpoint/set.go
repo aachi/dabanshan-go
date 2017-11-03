@@ -22,6 +22,7 @@ import (
 type Set struct {
 	CreateOrderEndpoint endpoint.Endpoint
 	GetOrdersEndpoint   endpoint.Endpoint
+	AddCartEndpoint     endpoint.Endpoint
 }
 
 // New returns a Set that wraps the provided server, and wires in all of the
@@ -30,6 +31,7 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 	var (
 		createOrderEndpoint endpoint.Endpoint
 		getOrdersEndpoint   endpoint.Endpoint
+		addCartEndpoint     endpoint.Endpoint
 	)
 	{
 		createOrderEndpoint = MakeCreateOrderEndpoint(svc)
@@ -48,10 +50,20 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 		getOrdersEndpoint = InstrumentingMiddleware(duration.With("method", "GetOrders"))(getOrdersEndpoint)
 
 	}
+	{
+		addCartEndpoint = MakeAddCartEndpoint(svc)
+		addCartEndpoint = ratelimit.NewTokenBucketLimiter(rl.NewBucketWithRate(1, 1))(addCartEndpoint)
+		addCartEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(addCartEndpoint)
+		addCartEndpoint = opentracing.TraceServer(trace, "AddCart")(addCartEndpoint)
+		addCartEndpoint = LoggingMiddleware(log.With(logger, "method", "AddCart"))(addCartEndpoint)
+		addCartEndpoint = InstrumentingMiddleware(duration.With("method", "AddCart"))(addCartEndpoint)
+
+	}
 
 	return Set{
 		CreateOrderEndpoint: createOrderEndpoint,
 		GetOrdersEndpoint:   getOrdersEndpoint,
+		AddCartEndpoint:     addCartEndpoint,
 	}
 }
 
@@ -75,6 +87,16 @@ func (s Set) GetOrders(ctx context.Context, a m_order.GetOrdersRequest) (m_order
 	return response, response.Err
 }
 
+// AddCart implements the service interface, so Set may be used as a service.
+func (s Set) AddCart(ctx context.Context, a m_order.CreateCartRequest) (m_order.CreatedCartResponse, error) {
+	resp, err := s.AddCartEndpoint(ctx, a)
+	if err != nil {
+		return m_order.CreatedCartResponse{}, err
+	}
+	response := resp.(m_order.CreatedCartResponse)
+	return response, response.Err
+}
+
 // MakeCreateOrderEndpoint constructs a CreateOrder endpoint wrapping the service.
 func MakeCreateOrderEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
@@ -89,6 +111,15 @@ func MakeGetOrderEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(m_order.GetOrdersRequest)
 		v, err := s.GetOrders(ctx, req)
+		return v, err
+	}
+}
+
+// MakeAddCartEndpoint constructs a GetOrders endpoint wrapping the service.
+func MakeAddCartEndpoint(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(m_order.CreateCartRequest)
+		v, err := s.AddCart(ctx, req)
 		return v, err
 	}
 }

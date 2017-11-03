@@ -11,11 +11,21 @@ message InvoiceRecord{
 
 message OrderItemRecord{
     string productid = 1;
-    string price = 2;
+    float price = 2;
+    string userid = 3;
 }
 
 message CreateOrderRequest{
     float amount = 1;
+}
+
+message CreateCartRequest{
+    OrderItemRecord item = 1;
+}
+
+message CreatedCartResponse{
+    string id = 1;
+    string err = 2;
 }
 
 message CreatedOrderResponse{

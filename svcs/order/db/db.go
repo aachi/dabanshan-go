@@ -13,6 +13,10 @@ type Database interface {
 	Init() error
 	CreateOrder(*m_order.Invoice) (string, error)
 	GetOrders(usrID string) ([]m_order.Invoice, error)
+	GetOrder(id string) (m_order.Invoice, error)
+	AddCart(cart *m_order.Cart) (string, error)
+	RemoveCartItem(cartID string) (bool, error)
+	GetCartItems(userID string) ([]m_order.Cart, error)
 }
 
 var (
@@ -65,4 +69,24 @@ func CreateOrder(mo *m_order.Invoice) (string, error) {
 // GetOrders ...
 func GetOrders(usrID string) ([]m_order.Invoice, error) {
 	return DefaultDb.GetOrders(usrID)
+}
+
+// GetOrder ...
+func GetOrder(id string) (m_order.Invoice, error) {
+	return DefaultDb.GetOrder(id)
+}
+
+// AddCart ..
+func AddCart(cart *m_order.Cart) (string, error) {
+	return DefaultDb.AddCart(cart)
+}
+
+// RemoveCartItem ..
+func RemoveCartItem(cartID string) (bool, error) {
+	return DefaultDb.RemoveCartItem(cartID)
+}
+
+// GetCartItems ..
+func GetCartItems(userID string) ([]m_order.Cart, error) {
+	return DefaultDb.GetCartItems(userID)
 }

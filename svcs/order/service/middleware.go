@@ -36,6 +36,11 @@ func (mw loggingMiddleware) GetOrders(ctx context.Context, a model.GetOrdersRequ
 	return mw.next.GetOrders(ctx, a)
 }
 
+func (mw loggingMiddleware) AddCart(ctx context.Context, a model.CreateCartRequest) (model.CreatedCartResponse, error) {
+	v, err := mw.next.AddCart(ctx, a)
+	return v, err
+}
+
 // InstrumentingMiddleware ..
 func InstrumentingMiddleware(ints, chars metrics.Counter) Middleware {
 	return func(next Service) Service {
@@ -60,5 +65,10 @@ func (mw instrumentingMiddleware) CreateOrder(ctx context.Context, a model.Creat
 
 func (mw instrumentingMiddleware) GetOrders(ctx context.Context, a model.GetOrdersRequest) (model.GetOrdersResponse, error) {
 	v, err := mw.next.GetOrders(ctx, a)
+	return v, err
+}
+
+func (mw instrumentingMiddleware) AddCart(ctx context.Context, a model.CreateCartRequest) (model.CreatedCartResponse, error) {
+	v, err := mw.next.AddCart(ctx, a)
 	return v, err
 }

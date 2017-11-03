@@ -6,6 +6,7 @@ type OrderItem struct {
 	ProductID int64   `json:"code" bson:"productId"`
 	Price     float32 `json:"price" bson:"price"`
 	Total     float32 `json:"total" bson:"total"`
+	CartID    float32 `json:"cartID" bson:"cartID"`
 }
 
 // Invoice represents.
@@ -16,6 +17,13 @@ type Invoice struct {
 	UserID      string      `json:"userid" bson:"userId"`
 	AddressID   string      `json:"addressid" bson:"addressId"`
 	OrderedItem []OrderItem `json:"orderedItem" bson:"orderedItem"`
+}
+
+// Cart represents.
+type Cart struct {
+	UserID    string  `json:"userID" bson:"userID"`
+	ProductID string  `json:"productID" bson:"productID"`
+	Price     float32 `json:"price" bson:"price"`
 }
 
 // New ..
@@ -29,6 +37,13 @@ type CreateOrderRequest struct {
 	Amount float32 `json:"amount"`
 }
 
+// CreateCartRequest struct
+type CreateCartRequest struct {
+	ProductID string  `json:"productID"`
+	UserID    string  `json:"userID"`
+	Price     float32 `json:"price"`
+}
+
 // GetOrdersRequest struct
 type GetOrdersRequest struct {
 	UserID string `json:"userID"`
@@ -36,6 +51,12 @@ type GetOrdersRequest struct {
 
 // CreatedOrderResponse ...
 type CreatedOrderResponse struct {
+	ID  string `json:"id"`
+	Err error  `json:"-"`
+}
+
+// CreatedCartResponse ...
+type CreatedCartResponse struct {
 	ID  string `json:"id"`
 	Err error  `json:"-"`
 }

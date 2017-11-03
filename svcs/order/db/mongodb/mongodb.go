@@ -13,12 +13,13 @@ import (
 )
 
 var (
-	name            string
-	password        string
-	host            string
-	db              = "test"
-	collections     = "orders"
-	ErrInvalidHexID = errors.New("Invalid Id Hex")
+	name             string
+	password         string
+	host             string
+	db               = "test"
+	orderCollections = "orders"
+	cartCollections  = "carts"
+	ErrInvalidHexID  = errors.New("Invalid Id Hex")
 )
 
 func init() {
@@ -39,11 +40,25 @@ type MongoOrder struct {
 	ID              bson.ObjectId `bson:"_id"`
 }
 
-// New Returns a new MongoOrder
-func New() MongoOrder {
+// MongoCart is a wrapper for the users
+type MongoCart struct {
+	m_order.Cart `bson:",inline"`
+	ID           bson.ObjectId `bson:"_id"`
+}
+
+// NewOrder Returns a new MongoOrder
+func NewOrder() MongoOrder {
 	u := m_order.New()
 	return MongoOrder{
 		Invoice: u,
+	}
+}
+
+// NewCart ..
+func NewCart() MongoCart {
+	u := m_order.Cart{}
+	return MongoCart{
+		Cart: u,
 	}
 }
 
@@ -69,7 +84,7 @@ func (m *Mongo) EnsureIndexes() error {
 		Background: true,
 		Sparse:     false,
 	}
-	c := s.DB(db).C(collections)
+	c := s.DB(db).C(orderCollections)
 	return c.EnsureIndex(i)
 }
 
@@ -91,10 +106,10 @@ func (m *Mongo) CreateOrder(u *m_order.Invoice) (string, error) {
 	s := m.Session.Copy()
 	defer s.Close()
 	id := bson.NewObjectId()
-	mu := New()
+	mu := NewOrder()
 	mu.Invoice = *u
 	mu.ID = id
-	c := s.DB(db).C(collections)
+	c := s.DB(db).C(orderCollections)
 	_, err := c.UpsertId(mu.ID, mu)
 	if err != nil {
 		return "", err
@@ -106,7 +121,7 @@ func (m *Mongo) CreateOrder(u *m_order.Invoice) (string, error) {
 func (m *Mongo) GetOrders(usrID string) ([]m_order.Invoice, error) {
 	s := m.Session.Copy()
 	defer s.Close()
-	c := s.DB(db).C(collections)
+	c := s.DB(db).C(orderCollections)
 	var orders []m_order.Invoice
 	err := c.Find(bson.M{"userId": usrID}).All(&orders)
 
@@ -114,4 +129,60 @@ func (m *Mongo) GetOrders(usrID string) ([]m_order.Invoice, error) {
 		return nil, err
 	}
 	return orders, nil
+}
+
+// GetOrder 根据用户查询订单.
+func (m *Mongo) GetOrder(id string) (m_order.Invoice, error) {
+	s := m.Session.Copy()
+	defer s.Close()
+	c := s.DB(db).C(orderCollections)
+	var order m_order.Invoice
+	err := c.FindId(id).One(&order)
+
+	if err != nil {
+		return m_order.Invoice{}, err
+	}
+	return order, nil
+}
+
+// GetCartItems ..
+func (m *Mongo) GetCartItems(userID string) ([]m_order.Cart, error) {
+	s := m.Session.Copy()
+	defer s.Close()
+	c := s.DB(db).C(cartCollections)
+	var cartItems []m_order.Cart
+	err := c.Find(bson.M{"userID": userID}).All(&cartItems)
+
+	if err != nil {
+		return nil, err
+	}
+	return cartItems, nil
+}
+
+// AddCart ..
+func (m *Mongo) AddCart(cart *m_order.Cart) (string, error) {
+	s := m.Session.Copy()
+	defer s.Close()
+	id := bson.NewObjectId()
+	mu := NewCart()
+	mu.Cart = *cart
+	mu.ID = id
+	c := s.DB(db).C(cartCollections)
+	_, err := c.UpsertId(mu.ID, mu)
+	if err != nil {
+		return "", err
+	}
+	return mu.ID.Hex(), nil
+}
+
+// RemoveCartItem ..
+func (m *Mongo) RemoveCartItem(cartID string) (bool, error) {
+	s := m.Session.Copy()
+	defer s.Close()
+	c := s.DB(db).C(cartCollections)
+	err := c.RemoveId(cartID)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
