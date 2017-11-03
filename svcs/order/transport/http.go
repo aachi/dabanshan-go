@@ -44,18 +44,26 @@ func NewHTTPHandler(endpoints o_endpoint.Set, tracer stdopentracing.Tracer, logg
 	)
 
 	addCartHandle := httptransport.NewServer(
-		endpoints.AddCartEndpoint,
+		endpoints.CreateCartEndpoint,
 		decodeHTTPAddCartRequest,
 		encodeHTTPGenericResponse,
 		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "AddCart", logger)))...,
+	)
+
+	getCartItemsHandle := httptransport.NewServer(
+		endpoints.GetCartItemsEndpoint,
+		decodeHTTPGetCartItemsRequest,
+		encodeHTTPGenericResponse,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "GetCartItems", logger)))...,
 	)
 
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	r.Handle("/api/v1/orders/", createOrderHandle).Methods("POST") //创建订单
-	r.Handle("/api/v1/orders/{id}/", nil).Methods("POST")          //更新订单项
-	r.Handle("/api/v1/orders/", getOrderHandle).Methods("GET")     //查询用户订单订单项 ?userId=xxxx
-	r.Handle("/api/v1/orders/carts/", addCartHandle).Methods("POST")
+	//r.Handle("/api/v1/orders/{id}/", nil).Methods("POST")          //更新订单项
+	r.Handle("/api/v1/orders/", getOrderHandle).Methods("GET") //查询用户订单订单项 ?userId=xxxx
+	r.Handle("/api/v1/carts/", addCartHandle).Methods("POST")
+	r.Handle("/api/v1/carts/", getCartItemsHandle).Methods("GET")
 	return r
 }

@@ -2,7 +2,6 @@ package db
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 
 	m_order "github.com/laidingqing/dabanshan/svcs/order/model"
@@ -32,7 +31,8 @@ var (
 )
 
 func init() {
-	database = *flag.String("database", "mongodb", "Database to use")
+	//database = *flag.String("database", "mongodb", "Database to use")
+	database = "mongodb"
 }
 
 //Init inits the selected DB in DefaultDb

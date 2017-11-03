@@ -24,6 +24,7 @@ type Cart struct {
 	UserID    string  `json:"userID" bson:"userID"`
 	ProductID string  `json:"productID" bson:"productID"`
 	Price     float32 `json:"price" bson:"price"`
+	CartID    string  `json:"id" bson:"_id"`
 }
 
 // New ..
@@ -67,6 +68,18 @@ type GetOrdersResponse struct {
 	Err    error     `json:"-"`
 }
 
+// GetCartItemsRequest ...
+type GetCartItemsRequest struct {
+	UserID string `json:"userID"`
+}
+
+// GetCartItemsResponse ..
+type GetCartItemsResponse struct {
+	Items []Cart `json:"items"`
+	Err   error  `json:"-"`
+}
+
+// Failer ...
 type Failer interface {
 	Failed() error
 }

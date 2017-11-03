@@ -8,6 +8,7 @@ import (
 	"github.com/laidingqing/dabanshan/svcs/order/model"
 )
 
+// Middleware ...
 type Middleware func(Service) Service
 
 // LoggingMiddleware ..
@@ -36,9 +37,18 @@ func (mw loggingMiddleware) GetOrders(ctx context.Context, a model.GetOrdersRequ
 	return mw.next.GetOrders(ctx, a)
 }
 
-func (mw loggingMiddleware) AddCart(ctx context.Context, a model.CreateCartRequest) (model.CreatedCartResponse, error) {
-	v, err := mw.next.AddCart(ctx, a)
-	return v, err
+func (mw loggingMiddleware) AddCart(ctx context.Context, a model.CreateCartRequest) (v model.CreatedCartResponse, err error) {
+	defer func() {
+		mw.logger.Log("method", "AddCart", "err", err)
+	}()
+	return mw.next.AddCart(ctx, a)
+}
+
+func (mw loggingMiddleware) GetCartItems(ctx context.Context, req model.GetCartItemsRequest) (v model.GetCartItemsResponse, err error) {
+	defer func() {
+		mw.logger.Log("method", "GetCartItems", "userID", req.UserID, "err", err)
+	}()
+	return mw.next.GetCartItems(ctx, req)
 }
 
 // InstrumentingMiddleware ..
@@ -70,5 +80,9 @@ func (mw instrumentingMiddleware) GetOrders(ctx context.Context, a model.GetOrde
 
 func (mw instrumentingMiddleware) AddCart(ctx context.Context, a model.CreateCartRequest) (model.CreatedCartResponse, error) {
 	v, err := mw.next.AddCart(ctx, a)
+	return v, err
+}
+func (mw instrumentingMiddleware) GetCartItems(ctx context.Context, req model.GetCartItemsRequest) (model.GetCartItemsResponse, error) {
+	v, err := mw.next.GetCartItems(ctx, req)
 	return v, err
 }

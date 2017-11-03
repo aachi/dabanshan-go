@@ -21,6 +21,11 @@ import (
 	u_endpoint "github.com/laidingqing/dabanshan/svcs/user/endpoint"
 	u_service "github.com/laidingqing/dabanshan/svcs/user/service"
 	u_transport "github.com/laidingqing/dabanshan/svcs/user/transport"
+
+	o_endpoint "github.com/laidingqing/dabanshan/svcs/order/endpoint"
+	o_service "github.com/laidingqing/dabanshan/svcs/order/service"
+	o_transport "github.com/laidingqing/dabanshan/svcs/order/transport"
+
 	stdopentracing "github.com/opentracing/opentracing-go"
 
 	"github.com/go-kit/kit/log"
@@ -73,8 +78,10 @@ func main() {
 			passingOnly      = true
 			pEndpoints       = p_endpoint.Set{}
 			uEndpoints       = u_endpoint.Set{}
+			oEndpoints       = o_endpoint.Set{}
 			productInstancer = consulsd.NewInstancer(client, logger, "productsvc", tags, passingOnly)
 			userInstancer    = consulsd.NewInstancer(client, logger, "usersvc", tags, passingOnly)
+			orderInstancer   = consulsd.NewInstancer(client, logger, "ordersvc", tags, passingOnly)
 		)
 		{
 			productfactory := addProductFactory(p_endpoint.MakeGetProductsEndpoint, tracer, logger)
@@ -104,8 +111,32 @@ func main() {
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			uEndpoints.LoginEndpoint = retry
 		}
+		{
+			orderfactory := addOrderFactory(o_endpoint.MakeAddCartEndpoint, tracer, logger)
+			endpointer := sd.NewEndpointer(orderInstancer, orderfactory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			oEndpoints.CreateCartEndpoint = retry
+		}
+		{
+			orderfactory := addOrderFactory(o_endpoint.MakeCreateOrderEndpoint, tracer, logger)
+			endpointer := sd.NewEndpointer(orderInstancer, orderfactory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			oEndpoints.CreateOrderEndpoint = retry
+		}
+		{
+			orderfactory := addOrderFactory(o_endpoint.MakeGetCartItemsEndpoint, tracer, logger)
+			endpointer := sd.NewEndpointer(orderInstancer, orderfactory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			oEndpoints.GetCartItemsEndpoint = retry
+		}
+
 		mux.Handle("/api/v1/products/", p_transport.NewHTTPHandler(pEndpoints, tracer, logger))
 		mux.Handle("/api/v1/users/", u_transport.NewHTTPHandler(uEndpoints, tracer, logger))
+		mux.Handle("/api/v1/orders/", o_transport.NewHTTPHandler(oEndpoints, tracer, logger))
+		mux.Handle("/api/v1/carts/", o_transport.NewHTTPHandler(oEndpoints, tracer, logger))
 	}
 	http.Handle("/", accessControl(mux))
 	//http.Handle("/static/", staticServer(mux, *staticDir))
@@ -147,6 +178,18 @@ func addProductFactory(makeEndpoint func(p_service.Service) endpoint.Endpoint, t
 			return nil, nil, err
 		}
 		service := p_transport.NewGRPCClient(conn, tracer, logger)
+		endpoint := makeEndpoint(service)
+		return endpoint, conn, nil
+	}
+}
+
+func addOrderFactory(makeEndpoint func(o_service.Service) endpoint.Endpoint, tracer stdopentracing.Tracer, logger log.Logger) sd.Factory {
+	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
+		conn, err := grpc.Dial(instance, grpc.WithInsecure())
+		if err != nil {
+			return nil, nil, err
+		}
+		service := o_transport.NewGRPCClient(conn, tracer, logger)
 		endpoint := makeEndpoint(service)
 		return endpoint, conn, nil
 	}

@@ -20,18 +20,20 @@ import (
 // be used as a helper struct, to collect all of the endpoints into a single
 // parameter.
 type Set struct {
-	CreateOrderEndpoint endpoint.Endpoint
-	GetOrdersEndpoint   endpoint.Endpoint
-	AddCartEndpoint     endpoint.Endpoint
+	CreateOrderEndpoint  endpoint.Endpoint
+	GetOrdersEndpoint    endpoint.Endpoint
+	CreateCartEndpoint   endpoint.Endpoint
+	GetCartItemsEndpoint endpoint.Endpoint
 }
 
 // New returns a Set that wraps the provided server, and wires in all of the
 // expected endpoint middlewares via the various parameters.
 func New(svc service.Service, logger log.Logger, duration metrics.Histogram, trace stdopentracing.Tracer) Set {
 	var (
-		createOrderEndpoint endpoint.Endpoint
-		getOrdersEndpoint   endpoint.Endpoint
-		addCartEndpoint     endpoint.Endpoint
+		createOrderEndpoint  endpoint.Endpoint
+		getOrdersEndpoint    endpoint.Endpoint
+		addCartEndpoint      endpoint.Endpoint
+		getCartItemsEndpoint endpoint.Endpoint
 	)
 	{
 		createOrderEndpoint = MakeCreateOrderEndpoint(svc)
@@ -57,13 +59,21 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 		addCartEndpoint = opentracing.TraceServer(trace, "AddCart")(addCartEndpoint)
 		addCartEndpoint = LoggingMiddleware(log.With(logger, "method", "AddCart"))(addCartEndpoint)
 		addCartEndpoint = InstrumentingMiddleware(duration.With("method", "AddCart"))(addCartEndpoint)
-
+	}
+	{
+		getCartItemsEndpoint = MakeGetCartItemsEndpoint(svc)
+		getCartItemsEndpoint = ratelimit.NewTokenBucketLimiter(rl.NewBucketWithRate(1, 1))(getCartItemsEndpoint)
+		getCartItemsEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(getCartItemsEndpoint)
+		getCartItemsEndpoint = opentracing.TraceServer(trace, "GetCartItems")(getCartItemsEndpoint)
+		getCartItemsEndpoint = LoggingMiddleware(log.With(logger, "method", "GetCartItems"))(getCartItemsEndpoint)
+		getCartItemsEndpoint = InstrumentingMiddleware(duration.With("method", "GetCartItems"))(getCartItemsEndpoint)
 	}
 
 	return Set{
-		CreateOrderEndpoint: createOrderEndpoint,
-		GetOrdersEndpoint:   getOrdersEndpoint,
-		AddCartEndpoint:     addCartEndpoint,
+		CreateOrderEndpoint:  createOrderEndpoint,
+		GetOrdersEndpoint:    getOrdersEndpoint,
+		CreateCartEndpoint:   addCartEndpoint,
+		GetCartItemsEndpoint: getCartItemsEndpoint,
 	}
 }
 
@@ -89,11 +99,21 @@ func (s Set) GetOrders(ctx context.Context, a m_order.GetOrdersRequest) (m_order
 
 // AddCart implements the service interface, so Set may be used as a service.
 func (s Set) AddCart(ctx context.Context, a m_order.CreateCartRequest) (m_order.CreatedCartResponse, error) {
-	resp, err := s.AddCartEndpoint(ctx, a)
+	resp, err := s.CreateCartEndpoint(ctx, a)
 	if err != nil {
 		return m_order.CreatedCartResponse{}, err
 	}
 	response := resp.(m_order.CreatedCartResponse)
+	return response, response.Err
+}
+
+// GetCartItems implements the service interface, so Set may be used as a service.
+func (s Set) GetCartItems(ctx context.Context, model m_order.GetCartItemsRequest) (m_order.GetCartItemsResponse, error) {
+	resp, err := s.GetCartItemsEndpoint(ctx, model)
+	if err != nil {
+		return m_order.GetCartItemsResponse{}, err
+	}
+	response := resp.(m_order.GetCartItemsResponse)
 	return response, response.Err
 }
 
@@ -120,6 +140,15 @@ func MakeAddCartEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(m_order.CreateCartRequest)
 		v, err := s.AddCart(ctx, req)
+		return v, err
+	}
+}
+
+// MakeGetCartItemsEndpoint constructs a GetOrders endpoint wrapping the service.
+func MakeGetCartItemsEndpoint(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(m_order.GetCartItemsRequest)
+		v, err := s.GetCartItems(ctx, req)
 		return v, err
 	}
 }

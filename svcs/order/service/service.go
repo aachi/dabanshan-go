@@ -20,6 +20,7 @@ type Service interface {
 	CreateOrder(ctx context.Context, order model.CreateOrderRequest) (model.CreatedOrderResponse, error)
 	GetOrders(ctx context.Context, req model.GetOrdersRequest) (model.GetOrdersResponse, error)
 	AddCart(ctx context.Context, req model.CreateCartRequest) (model.CreatedCartResponse, error)
+	GetCartItems(ctx context.Context, req model.GetCartItemsRequest) (model.GetCartItemsResponse, error)
 }
 
 // New returns a basic Service with all of the expected middlewares wired in.
@@ -47,7 +48,7 @@ func NewBasicService() Service {
 type basicService struct{}
 
 // GetUser get user by id
-func (s basicService) CreateOrder(_ context.Context, order model.CreateOrderRequest) (model.CreatedOrderResponse, error) {
+func (s basicService) CreateOrder(ctx context.Context, order model.CreateOrderRequest) (model.CreatedOrderResponse, error) {
 	u := model.New()
 	id, err := db.CreateOrder(&u)
 	if err != nil {
@@ -72,7 +73,7 @@ func (s basicService) GetOrders(ctx context.Context, req model.GetOrdersRequest)
 }
 
 // GetUser get user by id
-func (s basicService) AddCart(_ context.Context, order model.CreateCartRequest) (model.CreatedCartResponse, error) {
+func (s basicService) AddCart(ctx context.Context, order model.CreateCartRequest) (model.CreatedCartResponse, error) {
 	c := model.Cart{}
 	c.Price = order.Price
 	c.ProductID = order.ProductID
@@ -85,5 +86,19 @@ func (s basicService) AddCart(_ context.Context, order model.CreateCartRequest) 
 	return model.CreatedCartResponse{
 		ID:  id,
 		Err: nil,
+	}, nil
+}
+
+// GetCartItems find user's cart items
+func (s basicService) GetCartItems(ctx context.Context, req model.GetCartItemsRequest) (model.GetCartItemsResponse, error) {
+	items, err := db.GetCartItems(req.UserID)
+	if err != nil {
+		return model.GetCartItemsResponse{
+			Err: err,
+		}, err
+	}
+	return model.GetCartItemsResponse{
+		Items: items,
+		Err:   nil,
 	}, nil
 }

@@ -42,7 +42,18 @@ message GetOrdersResponse{
     string err = 2;
 }
 
+message GetCartItemsRequest{
+    string userid = 1;
+}
+
+message GetCartItemsResponse{
+    repeated OrderItemRecord items = 1;
+    string err = 2;
+}
+
 service OrderRpcService{
 	rpc CreateOrder(CreateOrderRequest) returns (CreatedOrderResponse) {}
     rpc GetOrders(GetOrdersRequest) returns (GetOrdersResponse) {}
+    rpc AddCart(CreateCartRequest) returns (CreatedCartResponse) {}
+    rpc GetCartItems(GetCartItemsRequest) returns (GetCartItemsResponse) {}
 }

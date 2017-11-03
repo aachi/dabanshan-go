@@ -39,22 +39,38 @@ func encodeGRPCGetOrdersResponse(_ context.Context, response interface{}) (inter
 
 // addCart encode/decode func
 
-func encodeGRPCAddCartResponse(_ context.Context, request interface{}) (interface{}, error) {
-	req := request.(model.CreateCartRequest)
-	return &pb.CreateCartRequest{
-		Item: &pb.OrderItemRecord{
-			Productid: req.ProductID,
-			Userid:    req.UserID,
-			Price:     float32(req.Price),
-		},
+func decodeGRPCAddCartRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.CreateCartRequest)
+	return model.CreateCartRequest{
+		UserID:    req.Item.Userid,
+		Price:     req.Item.Price,
+		ProductID: req.Item.Productid,
 	}, nil
 }
 
-func decodeGRPCAddCartRequest(_ context.Context, grpcReply interface{}) (interface{}, error) {
-	reply := grpcReply.(*pb.CreatedCartResponse)
-	return model.CreatedCartResponse{
-		ID:  reply.Id,
-		Err: str2err(reply.Err)}, nil
+func encodeGRPCAddCartResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(model.CreatedCartResponse)
+	return &pb.CreatedCartResponse{
+		Id:  resp.ID,
+		Err: err2str(resp.Err),
+	}, nil
+}
+
+// GetCartItems encode/decode
+
+func decodeGRPCGetCartItemsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.GetCartItemsRequest)
+	return model.GetCartItemsRequest{
+		UserID: req.Userid,
+	}, nil
+}
+
+func encodeGRPCGetCartItemsResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(model.GetCartItemsResponse)
+	return &pb.GetCartItemsResponse{
+		Items: modelCartItem2Pb(resp.Items),
+		Err:   err2str(resp.Err),
+	}, nil
 }
 
 // client encode and decode
@@ -106,6 +122,20 @@ func decodeGRPCAddCartResponse(_ context.Context, grpcReply interface{}) (interf
 		Err: str2err(reply.Err)}, nil
 }
 
+func encodeGRPCCartItemsRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(model.GetCartItemsRequest)
+	return &pb.GetCartItemsRequest{
+		Userid: req.UserID,
+	}, nil
+}
+
+func decodeGRPCCartItemsResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
+	reply := grpcReply.(*pb.GetCartItemsResponse)
+	return model.GetCartItemsResponse{
+		Items: pbCartItem2Model(reply.Items),
+		Err:   str2err(reply.Err)}, nil
+}
+
 func str2err(s string) error {
 	if s == "" {
 		return nil
@@ -118,4 +148,29 @@ func err2str(err error) string {
 		return ""
 	}
 	return err.Error()
+}
+
+func pbCartItem2Model(records []*pb.OrderItemRecord) []model.Cart {
+	var models []model.Cart
+	for _, record := range records {
+		models = append(models, model.Cart{
+			UserID:    record.Userid,
+			Price:     record.Price,
+			ProductID: record.Productid,
+		})
+	}
+	return models
+}
+
+func modelCartItem2Pb(models []model.Cart) []*pb.OrderItemRecord {
+	var records []*pb.OrderItemRecord
+	for _, model := range models {
+		records = append(records, &pb.OrderItemRecord{
+			Price:     model.Price,
+			Productid: model.ProductID,
+			Userid:    model.UserID,
+		})
+	}
+
+	return records
 }

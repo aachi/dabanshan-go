@@ -4,10 +4,11 @@ import (
 	"errors"
 	"flag"
 	"net/url"
+	"os"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	m_order "github.com/laidingqing/dabanshan/svcs/order/model"
-
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -22,10 +23,18 @@ var (
 	ErrInvalidHexID  = errors.New("Invalid Id Hex")
 )
 
+var logger log.Logger
+
 func init() {
 	name = *flag.String("mongouser", "", "Mongo user")
 	password = *flag.String("mongopassword", "", "Mongo password")
 	host = *flag.String("mongohost", "127.0.0.1:27017", "mongo host")
+
+	{
+		logger = log.NewLogfmtLogger(os.Stderr)
+		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
+		logger = log.With(logger, "caller", log.DefaultCaller)
+	}
 }
 
 // Mongo meets the Database interface requirements
@@ -43,7 +52,6 @@ type MongoOrder struct {
 // MongoCart is a wrapper for the users
 type MongoCart struct {
 	m_order.Cart `bson:",inline"`
-	ID           bson.ObjectId `bson:"_id"`
 }
 
 // NewOrder Returns a new MongoOrder
@@ -152,7 +160,7 @@ func (m *Mongo) GetCartItems(userID string) ([]m_order.Cart, error) {
 	c := s.DB(db).C(cartCollections)
 	var cartItems []m_order.Cart
 	err := c.Find(bson.M{"userID": userID}).All(&cartItems)
-
+	// not debug data.
 	if err != nil {
 		return nil, err
 	}
@@ -165,14 +173,14 @@ func (m *Mongo) AddCart(cart *m_order.Cart) (string, error) {
 	defer s.Close()
 	id := bson.NewObjectId()
 	mu := NewCart()
+	cart.CartID = id.Hex()
 	mu.Cart = *cart
-	mu.ID = id
 	c := s.DB(db).C(cartCollections)
-	_, err := c.UpsertId(mu.ID, mu)
+	_, err := c.UpsertId(id, mu)
 	if err != nil {
 		return "", err
 	}
-	return mu.ID.Hex(), nil
+	return id.Hex(), nil
 }
 
 // RemoveCartItem ..
