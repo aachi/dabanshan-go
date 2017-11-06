@@ -19,6 +19,8 @@ message OrderItemRecord{
 
 message CreateOrderRequest{
     float amount = 1;
+    string userid = 2;
+    repeated OrderItemRecord items = 3;
 }
 
 message CreateCartRequest{

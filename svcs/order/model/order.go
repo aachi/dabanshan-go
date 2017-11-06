@@ -2,11 +2,11 @@ package model
 
 // OrderItem represents .
 type OrderItem struct {
-	Quantity  int     `json:"quantity" bson:"quantity"`
+	Quantity  int32   `json:"quantity" bson:"quantity"`
 	ProductID int64   `json:"code" bson:"productId"`
 	Price     float32 `json:"price" bson:"price"`
 	Total     float32 `json:"total" bson:"total"`
-	CartID    float32 `json:"cartID" bson:"cartID"`
+	CartID    string  `json:"cartID" bson:"cartID"`
 }
 
 // Invoice represents.
@@ -37,7 +37,13 @@ func New() Invoice {
 
 // CreateOrderRequest struct
 type CreateOrderRequest struct {
-	Amount float32 `json:"amount"`
+	Invoice Invoice `json:"invoice"`
+}
+
+// CreatedOrderResponse ...
+type CreatedOrderResponse struct {
+	ID  string `json:"id"`
+	Err error  `json:"-"`
 }
 
 // CreateCartRequest struct
@@ -50,12 +56,6 @@ type CreateCartRequest struct {
 // GetOrdersRequest struct
 type GetOrdersRequest struct {
 	UserID string `json:"userID"`
-}
-
-// CreatedOrderResponse ...
-type CreatedOrderResponse struct {
-	ID  string `json:"id"`
-	Err error  `json:"-"`
 }
 
 // CreatedCartResponse ...
