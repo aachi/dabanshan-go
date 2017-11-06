@@ -73,6 +73,21 @@ func encodeGRPCGetCartItemsResponse(_ context.Context, response interface{}) (in
 	}, nil
 }
 
+// removeCartItem
+func decodeGRPCRemoveCartItemRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.RemoveCartItemRequest)
+	return model.RemoveCartItemRequest{
+		CartID: req.Cartid,
+	}, nil
+}
+
+func encodeGRPCRemoveCartItemResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(model.RemoveCartItemResponse)
+	return &pb.RemoveCartItemResponse{
+		Err: err2str(resp.Err),
+	}, nil
+}
+
 // client encode and decode
 
 func encodeGRPCCreateOrderRequest(_ context.Context, request interface{}) (interface{}, error) {
@@ -136,6 +151,19 @@ func decodeGRPCCartItemsResponse(_ context.Context, grpcReply interface{}) (inte
 		Err:   str2err(reply.Err)}, nil
 }
 
+func encodeGRPCRemoveCartItemRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(model.RemoveCartItemRequest)
+	return &pb.RemoveCartItemRequest{
+		Cartid: req.CartID,
+	}, nil
+}
+
+func decodeGRPCRemoveCartItemResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
+	reply := grpcReply.(*pb.RemoveCartItemResponse)
+	return model.RemoveCartItemResponse{
+		Err: str2err(reply.Err)}, nil
+}
+
 func str2err(s string) error {
 	if s == "" {
 		return nil
@@ -157,6 +185,7 @@ func pbCartItem2Model(records []*pb.OrderItemRecord) []model.Cart {
 			UserID:    record.Userid,
 			Price:     record.Price,
 			ProductID: record.Productid,
+			CartID:    record.Cartid,
 		})
 	}
 	return models
@@ -169,6 +198,7 @@ func modelCartItem2Pb(models []model.Cart) []*pb.OrderItemRecord {
 			Price:     model.Price,
 			Productid: model.ProductID,
 			Userid:    model.UserID,
+			Cartid:    model.CartID,
 		})
 	}
 

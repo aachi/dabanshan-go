@@ -194,3 +194,21 @@ func (m *Mongo) RemoveCartItem(cartID string) (bool, error) {
 	}
 	return true, nil
 }
+
+// UpdateQuantity update quantity of cartitem
+func (m *Mongo) UpdateQuantity(cart *m_order.Cart) (m_order.Cart, error) {
+	s := m.Session.Copy()
+	defer s.Close()
+	c := s.DB(db).C(cartCollections)
+	var item m_order.Cart
+	err := c.FindId(cart.CartID).One(&item)
+	if err != nil {
+		return m_order.Cart{}, err
+	}
+	item.Quantity = cart.Quantity
+	err = c.UpdateId(item.CartID, item)
+	if err != nil {
+		return m_order.Cart{}, err
+	}
+	return item, nil
+}

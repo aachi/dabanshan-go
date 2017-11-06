@@ -13,6 +13,7 @@ message OrderItemRecord{
     string productid = 1;
     float price = 2;
     string userid = 3;
+    string cartid = 4;
 }
 
 message CreateOrderRequest{
@@ -51,9 +52,18 @@ message GetCartItemsResponse{
     string err = 2;
 }
 
+message RemoveCartItemRequest{
+    string cartid = 1;
+}
+
+message RemoveCartItemResponse{
+    string err = 1;
+}
+
 service OrderRpcService{
 	rpc CreateOrder(CreateOrderRequest) returns (CreatedOrderResponse) {}
     rpc GetOrders(GetOrdersRequest) returns (GetOrdersResponse) {}
     rpc AddCart(CreateCartRequest) returns (CreatedCartResponse) {}
     rpc GetCartItems(GetCartItemsRequest) returns (GetCartItemsResponse) {}
+    rpc RemoveCartItem(RemoveCartItemRequest) returns (RemoveCartItemResponse) {}
 }

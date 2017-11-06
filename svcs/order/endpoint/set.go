@@ -20,20 +20,22 @@ import (
 // be used as a helper struct, to collect all of the endpoints into a single
 // parameter.
 type Set struct {
-	CreateOrderEndpoint  endpoint.Endpoint
-	GetOrdersEndpoint    endpoint.Endpoint
-	CreateCartEndpoint   endpoint.Endpoint
-	GetCartItemsEndpoint endpoint.Endpoint
+	CreateOrderEndpoint    endpoint.Endpoint
+	GetOrdersEndpoint      endpoint.Endpoint
+	CreateCartEndpoint     endpoint.Endpoint
+	GetCartItemsEndpoint   endpoint.Endpoint
+	RemoveCartItemEndpoint endpoint.Endpoint
 }
 
 // New returns a Set that wraps the provided server, and wires in all of the
 // expected endpoint middlewares via the various parameters.
 func New(svc service.Service, logger log.Logger, duration metrics.Histogram, trace stdopentracing.Tracer) Set {
 	var (
-		createOrderEndpoint  endpoint.Endpoint
-		getOrdersEndpoint    endpoint.Endpoint
-		addCartEndpoint      endpoint.Endpoint
-		getCartItemsEndpoint endpoint.Endpoint
+		createOrderEndpoint    endpoint.Endpoint
+		getOrdersEndpoint      endpoint.Endpoint
+		addCartEndpoint        endpoint.Endpoint
+		getCartItemsEndpoint   endpoint.Endpoint
+		removeCartItemEndpoint endpoint.Endpoint
 	)
 	{
 		createOrderEndpoint = MakeCreateOrderEndpoint(svc)
@@ -68,12 +70,21 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 		getCartItemsEndpoint = LoggingMiddleware(log.With(logger, "method", "GetCartItems"))(getCartItemsEndpoint)
 		getCartItemsEndpoint = InstrumentingMiddleware(duration.With("method", "GetCartItems"))(getCartItemsEndpoint)
 	}
+	{
+		removeCartItemEndpoint = MakeRemoveCartItemEndpoint(svc)
+		removeCartItemEndpoint = ratelimit.NewTokenBucketLimiter(rl.NewBucketWithRate(1, 1))(removeCartItemEndpoint)
+		removeCartItemEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(removeCartItemEndpoint)
+		removeCartItemEndpoint = opentracing.TraceServer(trace, "RemoveCartItem")(removeCartItemEndpoint)
+		removeCartItemEndpoint = LoggingMiddleware(log.With(logger, "method", "RemoveCartItem"))(removeCartItemEndpoint)
+		removeCartItemEndpoint = InstrumentingMiddleware(duration.With("method", "RemoveCartItem"))(removeCartItemEndpoint)
+	}
 
 	return Set{
-		CreateOrderEndpoint:  createOrderEndpoint,
-		GetOrdersEndpoint:    getOrdersEndpoint,
-		CreateCartEndpoint:   addCartEndpoint,
-		GetCartItemsEndpoint: getCartItemsEndpoint,
+		CreateOrderEndpoint:    createOrderEndpoint,
+		GetOrdersEndpoint:      getOrdersEndpoint,
+		CreateCartEndpoint:     addCartEndpoint,
+		GetCartItemsEndpoint:   getCartItemsEndpoint,
+		RemoveCartItemEndpoint: removeCartItemEndpoint,
 	}
 }
 
@@ -117,6 +128,16 @@ func (s Set) GetCartItems(ctx context.Context, model m_order.GetCartItemsRequest
 	return response, response.Err
 }
 
+// RemoveCartItem implements the service interface
+func (s Set) RemoveCartItem(ctx context.Context, model m_order.RemoveCartItemRequest) (m_order.RemoveCartItemResponse, error) {
+	resp, err := s.RemoveCartItemEndpoint(ctx, model)
+	if err != nil {
+		return m_order.RemoveCartItemResponse{}, err
+	}
+	response := resp.(m_order.RemoveCartItemResponse)
+	return response, response.Err
+}
+
 // MakeCreateOrderEndpoint constructs a CreateOrder endpoint wrapping the service.
 func MakeCreateOrderEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
@@ -149,6 +170,15 @@ func MakeGetCartItemsEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(m_order.GetCartItemsRequest)
 		v, err := s.GetCartItems(ctx, req)
+		return v, err
+	}
+}
+
+// MakeRemoveCartItemEndpoint constructs a GetOrders endpoint wrapping the service.
+func MakeRemoveCartItemEndpoint(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(m_order.RemoveCartItemRequest)
+		v, err := s.RemoveCartItem(ctx, req)
 		return v, err
 	}
 }

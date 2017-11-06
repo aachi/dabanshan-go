@@ -24,6 +24,7 @@ type Cart struct {
 	UserID    string  `json:"userID" bson:"userID"`
 	ProductID string  `json:"productID" bson:"productID"`
 	Price     float32 `json:"price" bson:"price"`
+	Quantity  int32   `json:"quantity" bson:"quantity"`
 	CartID    string  `json:"id" bson:"_id"`
 }
 
@@ -77,6 +78,16 @@ type GetCartItemsRequest struct {
 type GetCartItemsResponse struct {
 	Items []Cart `json:"items"`
 	Err   error  `json:"-"`
+}
+
+// RemoveCartItemRequest ..
+type RemoveCartItemRequest struct {
+	CartID string
+}
+
+// RemoveCartItemResponse ..
+type RemoveCartItemResponse struct {
+	Err error `json:"-"`
 }
 
 // Failer ...

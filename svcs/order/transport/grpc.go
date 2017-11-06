@@ -20,10 +20,11 @@ import (
 )
 
 type grpcServer struct {
-	createOrder  grpctransport.Handler
-	getOrders    grpctransport.Handler
-	addCart      grpctransport.Handler
-	getCartItems grpctransport.Handler
+	createOrder    grpctransport.Handler
+	getOrders      grpctransport.Handler
+	addCart        grpctransport.Handler
+	getCartItems   grpctransport.Handler
+	removeCartItem grpctransport.Handler
 }
 
 // NewGRPCServer ...
@@ -55,6 +56,12 @@ func NewGRPCServer(endpoints o_endpoint.Set, tracer stdopentracing.Tracer, logge
 			decodeGRPCGetCartItemsRequest,
 			encodeGRPCGetCartItemsResponse,
 			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "GetCartItems", logger)))...,
+		),
+		removeCartItem: grpctransport.NewServer(
+			endpoints.RemoveCartItemEndpoint,
+			decodeGRPCRemoveCartItemRequest,
+			encodeGRPCRemoveCartItemResponse,
+			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "RemoveCartItem", logger)))...,
 		),
 	}
 }
@@ -100,6 +107,16 @@ func (s *grpcServer) GetCartItems(ctx oldcontext.Context, req *pb.GetCartItemsRe
 	return res, nil
 }
 
+// RemoveCartItem
+func (s *grpcServer) RemoveCartItem(ctx oldcontext.Context, req *pb.RemoveCartItemRequest) (*pb.RemoveCartItemResponse, error) {
+	_, rep, err := s.removeCartItem.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	res := rep.(*pb.RemoveCartItemResponse)
+	return res, nil
+}
+
 // NewGRPCClient ...
 func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger log.Logger) service.Service {
 	limiter := ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(100, 100))
@@ -107,6 +124,7 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 	var getOrdersEndpoint endpoint.Endpoint
 	var addCartEndpoint endpoint.Endpoint
 	var getCartItemsEndpoint endpoint.Endpoint
+	var removeCartItemEndpoint endpoint.Endpoint
 	{
 		createOrderEndpoint = grpctransport.NewClient(
 			conn,
@@ -171,11 +189,28 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 			Name:    "GetCartItems",
 			Timeout: 30 * time.Second,
 		}))(getCartItemsEndpoint)
+
+		removeCartItemEndpoint = grpctransport.NewClient(
+			conn,
+			"pb.OrderRpcService",
+			"RemoveCartItem",
+			encodeGRPCRemoveCartItemRequest,
+			decodeGRPCRemoveCartItemResponse,
+			pb.RemoveCartItemResponse{},
+			grpctransport.ClientBefore(opentracing.ContextToGRPC(tracer, logger)),
+		).Endpoint()
+		removeCartItemEndpoint = opentracing.TraceClient(tracer, "RemoveCartItem")(removeCartItemEndpoint)
+		removeCartItemEndpoint = limiter(removeCartItemEndpoint)
+		removeCartItemEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
+			Name:    "RemoveCartItem",
+			Timeout: 30 * time.Second,
+		}))(removeCartItemEndpoint)
 	}
 	return o_endpoint.Set{
-		CreateOrderEndpoint:  createOrderEndpoint,
-		GetOrdersEndpoint:    getOrdersEndpoint,
-		CreateCartEndpoint:   addCartEndpoint,
-		GetCartItemsEndpoint: getCartItemsEndpoint,
+		CreateOrderEndpoint:    createOrderEndpoint,
+		GetOrdersEndpoint:      getOrdersEndpoint,
+		CreateCartEndpoint:     addCartEndpoint,
+		GetCartItemsEndpoint:   getCartItemsEndpoint,
+		RemoveCartItemEndpoint: removeCartItemEndpoint,
 	}
 }

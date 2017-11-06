@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
-	corelog "log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -44,9 +43,15 @@ func decodeHTTPAddCartRequest(_ context.Context, r *http.Request) (interface{}, 
 
 func decodeHTTPGetCartItemsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	id := r.FormValue("userId")
-	corelog.Print("userid:" + id)
 	return model.GetCartItemsRequest{
 		UserID: id,
+	}, nil
+}
+
+func decodeHTTPRemoveCartItemRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id := r.FormValue("cartId")
+	return model.RemoveCartItemRequest{
+		CartID: id,
 	}, nil
 }
 
