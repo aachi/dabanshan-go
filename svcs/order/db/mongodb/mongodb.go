@@ -3,6 +3,7 @@ package mongodb
 import (
 	"errors"
 	"flag"
+	corelog "log"
 	"net/url"
 	"os"
 	"time"
@@ -52,6 +53,7 @@ type MongoOrder struct {
 // MongoCart is a wrapper for the users
 type MongoCart struct {
 	m_order.Cart `bson:",inline"`
+	ID           bson.ObjectId `bson:"_id"`
 }
 
 // NewOrder Returns a new MongoOrder
@@ -173,7 +175,7 @@ func (m *Mongo) AddCart(cart *m_order.Cart) (string, error) {
 	defer s.Close()
 	id := bson.NewObjectId()
 	mu := NewCart()
-	cart.CartID = id.Hex()
+	mu.ID = id
 	mu.Cart = *cart
 	c := s.DB(db).C(cartCollections)
 	_, err := c.UpsertId(id, mu)
@@ -188,7 +190,8 @@ func (m *Mongo) RemoveCartItem(cartID string) (bool, error) {
 	s := m.Session.Copy()
 	defer s.Close()
 	c := s.DB(db).C(cartCollections)
-	err := c.RemoveId(cartID)
+	corelog.Print("cartID:" + cartID)
+	err := c.RemoveId(bson.ObjectIdHex(cartID))
 	if err != nil {
 		return false, err
 	}

@@ -3,6 +3,7 @@ package db
 import (
 	"errors"
 	"fmt"
+	corelog "log"
 
 	m_order "github.com/laidingqing/dabanshan/svcs/order/model"
 )
@@ -84,6 +85,7 @@ func AddCart(cart *m_order.Cart) (string, error) {
 
 // RemoveCartItem ..
 func RemoveCartItem(cartID string) (bool, error) {
+	corelog.Print("cartID is " + cartID)
 	return DefaultDb.RemoveCartItem(cartID)
 }
 

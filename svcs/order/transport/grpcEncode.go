@@ -186,6 +186,7 @@ func pbCartItem2Model(records []*pb.OrderItemRecord) []model.Cart {
 			Price:     record.Price,
 			ProductID: record.Productid,
 			CartID:    record.Cartid,
+			Quantity:  record.Quantity,
 		})
 	}
 	return models
@@ -199,6 +200,7 @@ func modelCartItem2Pb(models []model.Cart) []*pb.OrderItemRecord {
 			Productid: model.ProductID,
 			Userid:    model.UserID,
 			Cartid:    model.CartID,
+			Quantity:  model.Quantity,
 		})
 	}
 

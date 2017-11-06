@@ -49,7 +49,8 @@ func decodeHTTPGetCartItemsRequest(_ context.Context, r *http.Request) (interfac
 }
 
 func decodeHTTPRemoveCartItemRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	id := r.FormValue("cartId")
+	vars := mux.Vars(r)
+	id, _ := vars["cartId"]
 	return model.RemoveCartItemRequest{
 		CartID: id,
 	}, nil

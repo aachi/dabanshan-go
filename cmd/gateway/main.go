@@ -132,6 +132,13 @@ func main() {
 			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
 			oEndpoints.GetCartItemsEndpoint = retry
 		}
+		{
+			orderfactory := addOrderFactory(o_endpoint.MakeRemoveCartItemEndpoint, tracer, logger)
+			endpointer := sd.NewEndpointer(orderInstancer, orderfactory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			oEndpoints.RemoveCartItemEndpoint = retry
+		}
 
 		mux.Handle("/api/v1/products/", p_transport.NewHTTPHandler(pEndpoints, tracer, logger))
 		mux.Handle("/api/v1/users/", u_transport.NewHTTPHandler(uEndpoints, tracer, logger))

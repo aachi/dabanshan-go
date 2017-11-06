@@ -14,6 +14,7 @@ message OrderItemRecord{
     float price = 2;
     string userid = 3;
     string cartid = 4;
+    int32 quantity = 5;
 }
 
 message CreateOrderRequest{
