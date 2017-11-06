@@ -58,6 +58,13 @@ func (mw loggingMiddleware) RemoveCartItem(ctx context.Context, req model.Remove
 	return mw.next.RemoveCartItem(ctx, req)
 }
 
+func (mw loggingMiddleware) UpdateQuantity(ctx context.Context, req model.UpdateQuantityRequest) (v model.UpdateQuantityResponse, err error) {
+	defer func() {
+		mw.logger.Log("method", "UpdateQuantity", "err", err)
+	}()
+	return mw.next.UpdateQuantity(ctx, req)
+}
+
 // InstrumentingMiddleware ..
 func InstrumentingMiddleware(ints, chars metrics.Counter) Middleware {
 	return func(next Service) Service {
@@ -96,5 +103,10 @@ func (mw instrumentingMiddleware) GetCartItems(ctx context.Context, req model.Ge
 
 func (mw instrumentingMiddleware) RemoveCartItem(ctx context.Context, req model.RemoveCartItemRequest) (model.RemoveCartItemResponse, error) {
 	v, err := mw.next.RemoveCartItem(ctx, req)
+	return v, err
+}
+
+func (mw instrumentingMiddleware) UpdateQuantity(ctx context.Context, req model.UpdateQuantityRequest) (model.UpdateQuantityResponse, error) {
+	v, err := mw.next.UpdateQuantity(ctx, req)
 	return v, err
 }

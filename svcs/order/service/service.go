@@ -22,6 +22,7 @@ type Service interface {
 	AddCart(ctx context.Context, req model.CreateCartRequest) (model.CreatedCartResponse, error)
 	GetCartItems(ctx context.Context, req model.GetCartItemsRequest) (model.GetCartItemsResponse, error)
 	RemoveCartItem(ctx context.Context, req model.RemoveCartItemRequest) (model.RemoveCartItemResponse, error)
+	UpdateQuantity(ctx context.Context, req model.UpdateQuantityRequest) (model.UpdateQuantityResponse, error)
 }
 
 // New returns a basic Service with all of the expected middlewares wired in.
@@ -116,4 +117,21 @@ func (s basicService) RemoveCartItem(ctx context.Context, req model.RemoveCartIt
 	return model.RemoveCartItemResponse{
 		Err: nil,
 	}, nil
+}
+
+func (s basicService) UpdateQuantity(ctx context.Context, req model.UpdateQuantityRequest) (model.UpdateQuantityResponse, error) {
+	var cart = model.Cart{
+		CartID:   req.CartID,
+		Quantity: req.Quantity,
+		Price:    req.Price,
+	}
+	cart, err := db.UpdateQuantity(&cart)
+
+	if err != nil {
+		return model.UpdateQuantityResponse{
+			Err: err,
+		}, err
+	}
+
+	return model.UpdateQuantityResponse{}, nil
 }

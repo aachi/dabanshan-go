@@ -26,6 +26,7 @@ type Cart struct {
 	Price     float32 `json:"price" bson:"price"`
 	Quantity  int32   `json:"quantity" bson:"quantity"`
 	CartID    string  `json:"id" bson:"-"`
+	Total     float32 `json:"total" bson:"total"`
 }
 
 // New ..
@@ -87,6 +88,30 @@ type RemoveCartItemRequest struct {
 
 // RemoveCartItemResponse ..
 type RemoveCartItemResponse struct {
+	Err error `json:"-"`
+}
+
+// UpdateCartItemRequest ..
+type UpdateCartItemRequest struct {
+	CartID   string  `json:"cartID"`
+	Quantity int32   `json:"quantity"`
+	Price    float32 `json:"price"`
+}
+
+// UpdateCartItemResponse ..
+type UpdateCartItemResponse struct {
+	Err error `json:"-"`
+}
+
+// UpdateQuantityRequest ...
+type UpdateQuantityRequest struct {
+	CartID   string  `json:"cartID"`
+	Quantity int32   `json:"quantity"`
+	Price    float32 `json:"price"`
+}
+
+// UpdateQuantityResponse ...
+type UpdateQuantityResponse struct {
 	Err error `json:"-"`
 }
 

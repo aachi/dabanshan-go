@@ -61,10 +61,22 @@ message RemoveCartItemResponse{
     string err = 1;
 }
 
+message UpdateQuantityRequest{
+    string productid = 1;
+    string userid = 3;
+    string cartid = 4;
+    int32 quantity = 5;
+}
+
+message UpdateQuantityResponse{
+    string err = 1;
+}
+
 service OrderRpcService{
 	rpc CreateOrder(CreateOrderRequest) returns (CreatedOrderResponse) {}
     rpc GetOrders(GetOrdersRequest) returns (GetOrdersResponse) {}
     rpc AddCart(CreateCartRequest) returns (CreatedCartResponse) {}
     rpc GetCartItems(GetCartItemsRequest) returns (GetCartItemsResponse) {}
     rpc RemoveCartItem(RemoveCartItemRequest) returns (RemoveCartItemResponse) {}
+    rpc UpdateQuantity(UpdateQuantityRequest) returns (UpdateQuantityResponse) {}
 }

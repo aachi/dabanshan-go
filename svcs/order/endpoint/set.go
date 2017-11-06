@@ -25,6 +25,7 @@ type Set struct {
 	CreateCartEndpoint     endpoint.Endpoint
 	GetCartItemsEndpoint   endpoint.Endpoint
 	RemoveCartItemEndpoint endpoint.Endpoint
+	UpdateQuantityEndpoint endpoint.Endpoint
 }
 
 // New returns a Set that wraps the provided server, and wires in all of the
@@ -36,6 +37,7 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 		addCartEndpoint        endpoint.Endpoint
 		getCartItemsEndpoint   endpoint.Endpoint
 		removeCartItemEndpoint endpoint.Endpoint
+		updateQuantityEndpoint endpoint.Endpoint
 	)
 	{
 		createOrderEndpoint = MakeCreateOrderEndpoint(svc)
@@ -78,6 +80,14 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 		removeCartItemEndpoint = LoggingMiddleware(log.With(logger, "method", "RemoveCartItem"))(removeCartItemEndpoint)
 		removeCartItemEndpoint = InstrumentingMiddleware(duration.With("method", "RemoveCartItem"))(removeCartItemEndpoint)
 	}
+	{
+		updateQuantityEndpoint = MakeUpdateQuantityEndpoint(svc)
+		updateQuantityEndpoint = ratelimit.NewTokenBucketLimiter(rl.NewBucketWithRate(1, 1))(updateQuantityEndpoint)
+		updateQuantityEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(updateQuantityEndpoint)
+		updateQuantityEndpoint = opentracing.TraceServer(trace, "UpdateQuantity")(updateQuantityEndpoint)
+		updateQuantityEndpoint = LoggingMiddleware(log.With(logger, "method", "UpdateQuantity"))(updateQuantityEndpoint)
+		updateQuantityEndpoint = InstrumentingMiddleware(duration.With("method", "UpdateQuantity"))(updateQuantityEndpoint)
+	}
 
 	return Set{
 		CreateOrderEndpoint:    createOrderEndpoint,
@@ -85,6 +95,7 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 		CreateCartEndpoint:     addCartEndpoint,
 		GetCartItemsEndpoint:   getCartItemsEndpoint,
 		RemoveCartItemEndpoint: removeCartItemEndpoint,
+		UpdateQuantityEndpoint: updateQuantityEndpoint,
 	}
 }
 
@@ -125,6 +136,16 @@ func (s Set) GetCartItems(ctx context.Context, model m_order.GetCartItemsRequest
 		return m_order.GetCartItemsResponse{}, err
 	}
 	response := resp.(m_order.GetCartItemsResponse)
+	return response, response.Err
+}
+
+// UpdateQuantity implements the service interface.
+func (s Set) UpdateQuantity(ctx context.Context, req m_order.UpdateQuantityRequest) (m_order.UpdateQuantityResponse, error) {
+	resp, err := s.UpdateQuantityEndpoint(ctx, req)
+	if err != nil {
+		return m_order.UpdateQuantityResponse{}, err
+	}
+	response := resp.(m_order.UpdateQuantityResponse)
 	return response, response.Err
 }
 
@@ -179,6 +200,15 @@ func MakeRemoveCartItemEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(m_order.RemoveCartItemRequest)
 		v, err := s.RemoveCartItem(ctx, req)
+		return v, err
+	}
+}
+
+// MakeUpdateQuantityEndpoint constructs a GetOrders endpoint wrapping the service.
+func MakeUpdateQuantityEndpoint(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(m_order.UpdateQuantityRequest)
+		v, err := s.UpdateQuantity(ctx, req)
 		return v, err
 	}
 }

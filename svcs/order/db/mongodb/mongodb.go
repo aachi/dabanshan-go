@@ -203,13 +203,16 @@ func (m *Mongo) UpdateQuantity(cart *m_order.Cart) (m_order.Cart, error) {
 	s := m.Session.Copy()
 	defer s.Close()
 	c := s.DB(db).C(cartCollections)
+
+	corelog.Print("cartID:" + cart.CartID)
 	var item m_order.Cart
-	err := c.FindId(cart.CartID).One(&item)
+	err := c.FindId(bson.ObjectIdHex(cart.CartID)).One(&item)
 	if err != nil {
 		return m_order.Cart{}, err
 	}
+	item.CartID = cart.CartID
 	item.Quantity = cart.Quantity
-	err = c.UpdateId(item.CartID, item)
+	err = c.UpdateId(bson.ObjectIdHex(item.CartID), item)
 	if err != nil {
 		return m_order.Cart{}, err
 	}

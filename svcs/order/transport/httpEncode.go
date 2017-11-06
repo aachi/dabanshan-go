@@ -56,6 +56,22 @@ func decodeHTTPRemoveCartItemRequest(_ context.Context, r *http.Request) (interf
 	}, nil
 }
 
+func decodeHTTPUpdateQuantityRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, _ := vars["cartId"]
+
+	defer r.Body.Close()
+	a := model.UpdateQuantityRequest{}
+	err := json.NewDecoder(r.Body).Decode(&a)
+	if err != nil {
+		return nil, err
+	}
+	return model.UpdateQuantityRequest{
+		CartID:   id,
+		Quantity: a.Quantity,
+	}, nil
+}
+
 func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	w.WriteHeader(err2code(err))
 	json.NewEncoder(w).Encode(errorWrapper{Error: err.Error()})

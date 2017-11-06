@@ -88,6 +88,21 @@ func encodeGRPCRemoveCartItemResponse(_ context.Context, response interface{}) (
 	}, nil
 }
 
+func decodeGRPCUpdateQuantityRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.UpdateQuantityRequest)
+	return model.UpdateQuantityRequest{
+		CartID:   req.Cartid,
+		Quantity: req.Quantity,
+	}, nil
+}
+
+func encodeGRPCUpdateQuantityResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(model.UpdateQuantityResponse)
+	return &pb.UpdateQuantityResponse{
+		Err: err2str(resp.Err),
+	}, nil
+}
+
 // client encode and decode
 
 func encodeGRPCCreateOrderRequest(_ context.Context, request interface{}) (interface{}, error) {
@@ -161,6 +176,22 @@ func encodeGRPCRemoveCartItemRequest(_ context.Context, request interface{}) (in
 func decodeGRPCRemoveCartItemResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
 	reply := grpcReply.(*pb.RemoveCartItemResponse)
 	return model.RemoveCartItemResponse{
+		Err: str2err(reply.Err)}, nil
+}
+
+// UpdateQuantity encode/decode
+
+func encodeGRPCUpdateQuantityRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(model.UpdateQuantityRequest)
+	return &pb.UpdateQuantityRequest{
+		Cartid:   req.CartID,
+		Quantity: req.Quantity,
+	}, nil
+}
+
+func decodeGRPCUpdateQuantityResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
+	reply := grpcReply.(*pb.UpdateQuantityResponse)
+	return model.UpdateQuantityResponse{
 		Err: str2err(reply.Err)}, nil
 }
 
