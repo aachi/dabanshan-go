@@ -12,6 +12,7 @@
 
 * svcs/product 
 * svcs/user
+* svcs/order
 
 ## how debug ?
 

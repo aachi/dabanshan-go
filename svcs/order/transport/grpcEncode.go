@@ -12,13 +12,20 @@ import (
 func decodeGRPCCreateOrderRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*pb.CreateOrderRequest)
 	return model.CreateOrderRequest{
-		Amount: float32(req.Amount),
+		Invoice: model.Invoice{
+			Amount:      req.Amount,
+			UserID:      req.Userid,
+			OrderedItem: pbInvoice2Model(req.Items),
+		},
 	}, nil
 }
 
 func encodeGRPCCreateOrderResponse(_ context.Context, response interface{}) (interface{}, error) {
 	resp := response.(model.CreatedOrderResponse)
-	return &pb.CreatedOrderResponse{Err: err2str(resp.Err)}, nil
+	return &pb.CreatedOrderResponse{
+		Id:  resp.ID,
+		Err: err2str(resp.Err),
+	}, nil
 }
 
 // GetOrders encode/decode
@@ -108,7 +115,9 @@ func encodeGRPCUpdateQuantityResponse(_ context.Context, response interface{}) (
 func encodeGRPCCreateOrderRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(model.CreateOrderRequest)
 	return &pb.CreateOrderRequest{
-		Amount: float32(req.Amount),
+		Amount: req.Invoice.Amount,
+		Userid: req.Invoice.UserID,
+		Items:  modelInvoice2Pb(req.Invoice.OrderedItem),
 	}, nil
 }
 
@@ -207,6 +216,30 @@ func err2str(err error) string {
 		return ""
 	}
 	return err.Error()
+}
+
+func pbInvoice2Model(records []*pb.OrderItemRecord) []model.OrderItem {
+	var models []model.OrderItem
+	for _, record := range records {
+		models = append(models, model.OrderItem{
+			CartID:   record.Cartid,
+			Quantity: record.Quantity,
+			Price:    record.Price,
+		})
+	}
+	return models
+}
+
+func modelInvoice2Pb(records []model.OrderItem) []*pb.OrderItemRecord {
+	var models []*pb.OrderItemRecord
+	for _, record := range records {
+		models = append(models, &pb.OrderItemRecord{
+			Cartid:   record.CartID,
+			Quantity: record.Quantity,
+			Price:    record.Price,
+		})
+	}
+	return models
 }
 
 func pbCartItem2Model(records []*pb.OrderItemRecord) []model.Cart {

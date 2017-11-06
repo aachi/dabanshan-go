@@ -88,7 +88,7 @@ func (m *Mongo) EnsureIndexes() error {
 	s := m.Session.Copy()
 	defer s.Close()
 	i := mgo.Index{
-		Key:        []string{"userId"},
+		Key:        []string{"_id"},
 		Unique:     true,
 		DropDups:   true,
 		Background: true,
