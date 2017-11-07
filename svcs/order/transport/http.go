@@ -27,7 +27,6 @@ func NewHTTPHandler(endpoints o_endpoint.Set, tracer stdopentracing.Tracer, logg
 	}
 	// m := http.NewServeMux()
 	r := mux.NewRouter()
-	//authenticationMiddleware := authorize.ValidateTokenMiddleware()
 
 	createOrderHandle := httptransport.NewServer(
 		endpoints.CreateOrderEndpoint,
@@ -73,6 +72,10 @@ func NewHTTPHandler(endpoints o_endpoint.Set, tracer stdopentracing.Tracer, logg
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+	// r.Handle("/api/v1/orders/", negroni.New(
+	// 	negroni.HandlerFunc(authorize.JwtMiddleware.HandlerWithNext),
+	// 	negroni.Wrap(createOrderHandle),
+	// )).Methods("POST") //创建订单
 	r.Handle("/api/v1/orders/", createOrderHandle).Methods("POST") //创建订单
 	//r.Handle("/api/v1/orders/{id}/", nil).Methods("POST")                       //更新订单项
 	//r.Handle("/api/v1/orders/{id}/", nil).Methods("GET")                        //查看订单详情
