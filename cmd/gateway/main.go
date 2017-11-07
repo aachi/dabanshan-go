@@ -40,7 +40,7 @@ func main() {
 		consulAddr   = flag.String("consul.addr", "localhost:8500", "Consul agent address")
 		retryMax     = flag.Int("retry.max", 3, "per-request retries to different instances")
 		retryTimeout = flag.Duration("retry.timeout", 500*time.Millisecond, "per-request timeout, including retries")
-		staticDir    = flag.String("static_dir", "./public", "static directory in addition to default static directory")
+		staticDir    = flag.String("static_dir", "./public/", "static directory in addition to default static directory")
 	)
 	flag.Parse()
 
