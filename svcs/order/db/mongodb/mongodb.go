@@ -88,8 +88,8 @@ func (m *Mongo) EnsureIndexes() error {
 	s := m.Session.Copy()
 	defer s.Close()
 	i := mgo.Index{
-		Key:        []string{"_id"},
-		Unique:     true,
+		Key:        []string{"userId"},
+		Unique:     false,
 		DropDups:   true,
 		Background: true,
 		Sparse:     false,
@@ -113,6 +113,7 @@ func getURL() url.URL {
 
 // CreateOrder Insert user to MongoDB
 func (m *Mongo) CreateOrder(u *m_order.Invoice) (string, error) {
+	u.CreatedAt = time.Now()
 	s := m.Session.Copy()
 	defer s.Close()
 	id := bson.NewObjectId()

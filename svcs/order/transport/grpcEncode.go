@@ -6,16 +6,19 @@ import (
 
 	"github.com/laidingqing/dabanshan/pb"
 	"github.com/laidingqing/dabanshan/svcs/order/model"
+	"github.com/laidingqing/dabanshan/utils"
 )
 
 // CreateOrder encode/decode
 func decodeGRPCCreateOrderRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*pb.CreateOrderRequest)
+	logger := utils.NewLogger()
+	logger.Log("amount", req.Amount, "userId", req.Userid)
 	return model.CreateOrderRequest{
 		Invoice: model.Invoice{
-			Amount:      req.Amount,
-			UserID:      req.Userid,
-			OrderedItem: pbInvoice2Model(req.Items),
+			Amount:     req.Amount,
+			UserID:     req.Userid,
+			OrdereItem: pbInvoice2Model(req.Items),
 		},
 	}, nil
 }
@@ -114,10 +117,12 @@ func encodeGRPCUpdateQuantityResponse(_ context.Context, response interface{}) (
 
 func encodeGRPCCreateOrderRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(model.CreateOrderRequest)
+	logger := utils.NewLogger()
+	logger.Log("amount", req.Invoice.Amount, "userId", req.Invoice.UserID)
 	return &pb.CreateOrderRequest{
 		Amount: req.Invoice.Amount,
 		Userid: req.Invoice.UserID,
-		Items:  modelInvoice2Pb(req.Invoice.OrderedItem),
+		Items:  modelInvoice2Pb(req.Invoice.OrdereItem),
 	}, nil
 }
 

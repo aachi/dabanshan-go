@@ -10,12 +10,16 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/laidingqing/dabanshan/svcs/order/model"
 	"github.com/laidingqing/dabanshan/svcs/order/service"
+	"github.com/laidingqing/dabanshan/utils"
 )
 
 func decodeHTTPCreateOrderRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	logger := utils.NewLogger()
+
 	defer r.Body.Close()
 	a := model.CreateOrderRequest{}
 	err := json.NewDecoder(r.Body).Decode(&a)
+	logger.Log("amount", a.Invoice.Amount, "userId", a.Invoice.UserID, "items", len(a.Invoice.OrdereItem))
 	if err != nil {
 		return nil, err
 	}

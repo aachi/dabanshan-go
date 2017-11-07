@@ -51,8 +51,7 @@ type basicService struct{}
 
 // GetUser get user by id
 func (s basicService) CreateOrder(ctx context.Context, order model.CreateOrderRequest) (model.CreatedOrderResponse, error) {
-	u := model.New()
-	id, err := db.CreateOrder(&u)
+	id, err := db.CreateOrder(&order.Invoice)
 	if err != nil {
 		return model.CreatedOrderResponse{ID: "", Err: err}, err
 	}

@@ -1,5 +1,9 @@
 package model
 
+import (
+	"time"
+)
+
 // OrderItem represents .
 type OrderItem struct {
 	Quantity  int32   `json:"quantity" bson:"quantity"`
@@ -11,12 +15,15 @@ type OrderItem struct {
 
 // Invoice represents.
 type Invoice struct {
-	Amount      float32     `json:"amount" bson:"amount"`
-	Discount    float32     `json:"discount" bson:"discount"`
-	DiscountID  float32     `json:"discountid" bson:"discountId"`
-	UserID      string      `json:"userid" bson:"userId"`
-	AddressID   string      `json:"addressid" bson:"addressId"`
-	OrderedItem []OrderItem `json:"orderedItem" bson:"orderedItem"`
+	Amount     float32     `json:"amount" bson:"amount"`
+	Discount   float32     `json:"discount" bson:"discount"`
+	DiscountID float32     `json:"discountid" bson:"discountId"`
+	UserID     string      `json:"userid" bson:"userId"`
+	TenantID   string      `json:"tenantId" bson:"tenantId"`
+	AddressID  string      `json:"addressId" bson:"addressId"`
+	CreatedAt  time.Time   `json:"createdAt" bson:"createdAt"`
+	Status     OrderStatus `json:"status" bson:"status"`
+	OrdereItem []OrderItem `json:"items" bson:"items"`
 }
 
 // Cart represents.
