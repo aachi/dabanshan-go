@@ -25,7 +25,7 @@ func NewHTTPHandler(endpoints o_endpoint.Set, tracer stdopentracing.Tracer, logg
 		httptransport.ServerErrorEncoder(errorEncoder),
 		httptransport.ServerErrorLogger(logger),
 	}
-	// m := http.NewServeMux()
+	//m := http.NewServeMux()
 	r := mux.NewRouter()
 
 	createOrderHandle := httptransport.NewServer(

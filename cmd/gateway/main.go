@@ -16,6 +16,7 @@ import (
 	p_endpoint "github.com/laidingqing/dabanshan/svcs/product/endpoint"
 	p_service "github.com/laidingqing/dabanshan/svcs/product/service"
 	p_transport "github.com/laidingqing/dabanshan/svcs/product/transport"
+	"github.com/laidingqing/dabanshan/utils"
 	"google.golang.org/grpc"
 
 	u_endpoint "github.com/laidingqing/dabanshan/svcs/user/endpoint"
@@ -39,17 +40,12 @@ func main() {
 		consulAddr   = flag.String("consul.addr", "localhost:8500", "Consul agent address")
 		retryMax     = flag.Int("retry.max", 3, "per-request retries to different instances")
 		retryTimeout = flag.Duration("retry.timeout", 500*time.Millisecond, "per-request timeout, including retries")
-		//staticDir    = flag.String("static_dir", "/public", "static directory in addition to default static directory")
+		staticDir    = flag.String("static_dir", "./public", "static directory in addition to default static directory")
 	)
 	flag.Parse()
 
 	// Logging domain.
-	var logger log.Logger
-	{
-		logger = log.NewLogfmtLogger(os.Stderr)
-		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
-		logger = log.With(logger, "caller", log.DefaultCaller)
-	}
+	logger := utils.NewLogger()
 
 	// Service discovery domain. In this example we use Consul.
 	var client consulsd.Client
@@ -68,10 +64,8 @@ func main() {
 
 	// Transport domain.
 	tracer := stdopentracing.GlobalTracer() // no-op
-	// ctx := context.Background()
-	// r := mux.NewRouter()
 	mux := http.NewServeMux()
-	// products routes.
+	//r := mux.NewRouter()
 	{
 		var (
 			tags             = []string{}
@@ -151,9 +145,9 @@ func main() {
 		mux.Handle("/api/v1/users/", u_transport.NewHTTPHandler(uEndpoints, tracer, logger))
 		mux.Handle("/api/v1/orders/", o_transport.NewHTTPHandler(oEndpoints, tracer, logger))
 		mux.Handle("/api/v1/carts/", o_transport.NewHTTPHandler(oEndpoints, tracer, logger))
+		mux.Handle("/", http.FileServer(http.Dir(*staticDir)))
 	}
 	http.Handle("/", accessControl(mux))
-	//http.Handle("/static/", staticServer(mux, *staticDir))
 	// Interrupt handler.
 	errc := make(chan error, 2)
 	go func() {
@@ -165,7 +159,7 @@ func main() {
 	// HTTP transport.
 	go func() {
 		logger.Log("transport", "HTTP", "addr", *httpAddr)
-		errc <- http.ListenAndServe(*httpAddr, mux)
+		errc <- http.ListenAndServe(*httpAddr, nil)
 	}()
 
 	// Run!
