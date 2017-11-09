@@ -10,5 +10,15 @@ define(function() {
     }
     controllers.HomeCtrl.$inject = ['$scope', '$rootScope'];
     
+    controllers.ExploreCtrl = function($scope, $rootScope) {
+        
+    }
+    controllers.ExploreCtrl.$inject = ['$scope', '$rootScope'];
+ 
+    controllers.TenantsCtrl = function($scope, $rootScope) {
+        
+    }
+    controllers.TenantsCtrl.$inject = ['$scope', '$rootScope'];
+
     return controllers;
 });
