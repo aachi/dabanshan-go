@@ -168,11 +168,16 @@ ul, ol{
 }
 .filter-wrap{
     background-color: #FFF;
-    padding: 0 5px;
+    padding-top: 0;
+    padding-left: 26px;
 }
 /*FILTER*/
 .filter-wrap .filter-list{
     border-bottom: 1px dashed #e5ebf0;
+}
+.filter-wrap .row{
+    margin-left: 0px;
+    margin-right: 0px;
 }
 .filter-wrap .spread-row{
     text-align: center;
@@ -217,6 +222,14 @@ ul, ol{
     margin-bottom: 4px;
     margin-right: 5px;
     overflow: hidden
+}
+.filter-wrap ul.filter-content li span{
+    padding: 0 10px;
+    line-height: 24px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 2px;
+    display: inline-block
 }
 .filter-wrap ul.filter-content li.active>span{
     color: #2868d1;
