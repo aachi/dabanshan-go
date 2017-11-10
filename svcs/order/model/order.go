@@ -11,6 +11,7 @@ type OrderItem struct {
 	Price     float32 `json:"price" bson:"price"`
 	Total     float32 `json:"total" bson:"total"`
 	CartID    string  `json:"cartID" bson:"cartID"`
+	TenantID  string  `json:"tenantId" bson:"tenantId"`
 }
 
 // Invoice represents.
@@ -19,10 +20,18 @@ type Invoice struct {
 	Discount   float32     `json:"discount" bson:"discount"`
 	DiscountID float32     `json:"discountid" bson:"discountId"`
 	UserID     string      `json:"userid" bson:"userId"`
-	TenantID   string      `json:"tenantId" bson:"tenantId"`
 	AddressID  string      `json:"addressId" bson:"addressId"`
 	CreatedAt  time.Time   `json:"createdAt" bson:"createdAt"`
 	Status     OrderStatus `json:"status" bson:"status"`
+	OrdereItem []OrderItem `json:"items" bson:"items"`
+}
+
+// Procurement represents. 采购清单
+type Procurement struct {
+	Amount     float32     `json:"amount" bson:"amount"`
+	UserID     string      `json:"userid" bson:"userId"`
+	CreatedAt  time.Time   `json:"createdAt" bson:"createdAt"`
+	UpdatedAt  time.Time   `json:"updatedAt" bson:"updatedAt"`
 	OrdereItem []OrderItem `json:"items" bson:"items"`
 }
 

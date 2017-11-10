@@ -171,6 +171,31 @@ ul, ol{
     padding-top: 0;
     padding-left: 26px;
 }
+.explore-list-wrap{
+    margin-top: 20px;
+}
+.explore-list-wrap .panel{
+    border:0;
+    background: none
+}
+.explore-list-wrap .btn {
+    display: inline-block;
+    font-size: 14px;
+    padding: 7px 24px;
+    border-radius: 4px;
+    color: #fff;
+    border: 1px solid #6b15a1;
+    background: #6b15a1;
+    font-weight: 400
+}
+.explore-list-wrap .panel-heading{
+    height: 150px;
+}
+.explore-list-wrap .pannel-wrap{
+    background-color: #fff;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
 /*FILTER*/
 .filter-wrap .filter-list{
     border-bottom: 1px dashed #e5ebf0;
@@ -209,7 +234,8 @@ ul, ol{
     letter-spacing: 0;
     font-weight: 600;
     line-height: 24px;
-    white-space: nowrap
+    white-space: nowrap;
+    line-height: 38px;
 }
 .filter-wrap ul.filter-content li{
     float: left;
@@ -218,7 +244,7 @@ ul, ol{
     cursor: pointer;
     width: 100px;
     height: 24px;
-    line-height: 24px;
+    line-height: 38px;
     margin-bottom: 4px;
     margin-right: 5px;
     overflow: hidden
