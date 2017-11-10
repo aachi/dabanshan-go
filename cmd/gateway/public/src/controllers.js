@@ -5,10 +5,14 @@
 define(function() {
     var controllers = {};
 
-    controllers.HomeCtrl = function($scope, $rootScope) {
-
+    controllers.HomeCtrl = function($scope, $rootScope, $location, UserService) {
+        $scope.login = function() {
+            UserService.login($scope.username, $scope.password, function(resp){
+                $location.path("/explore")
+            })
+        }
     }
-    controllers.HomeCtrl.$inject = ['$scope', '$rootScope'];
+    controllers.HomeCtrl.$inject = ['$scope', '$rootScope', '$location', 'UserService'];
     
     controllers.ExploreCtrl = function($scope, $rootScope) {
         

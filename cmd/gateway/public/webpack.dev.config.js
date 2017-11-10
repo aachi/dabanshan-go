@@ -48,6 +48,7 @@ module.exports = {
         }),
         new CopyWebpackPlugin([
           { from: 'node_modules/bootstrap/dist/css/bootstrap.min.css', to: 'bootstrap/css' },
+          { from: 'node_modules/bootstrap/dist/css/bootstrap.min.css.map', to: 'bootstrap/css' },
           { from: 'node_modules/bootstrap/dist/fonts', to: 'bootstrap/fonts' },
         ])
       ]

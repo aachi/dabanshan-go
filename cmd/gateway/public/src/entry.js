@@ -1,7 +1,7 @@
 'use strict';
-require(['angular', './controllers', 'angular-route'], 
+require(['angular', './controllers', './services', 'angular-route'], 
   function(angular, controllers) {
-    angular.module('app', ['ngRoute', 'ui.bootstrap'])
+    angular.module('app', ['app.services', 'ngRoute', 'ui.bootstrap'])
         .run(function($rootScope, $templateCache) {  
           $rootScope.$on('$routeChangeStart', function(event, next, current) {  
               if (typeof(current) !== 'undefined'){  
