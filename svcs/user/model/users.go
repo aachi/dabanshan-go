@@ -14,14 +14,16 @@ var (
 	ErrMissingField         = "Error missing %v"
 )
 
+// User 用户结构
 type User struct {
-	FirstName string `json:"firstName" bson:"firstName"`
-	LastName  string `json:"lastName" bson:"lastName"`
-	Email     string `json:"-" bson:"email"`
-	Username  string `json:"username" bson:"username"`
-	Password  string `json:"-" bson:"password,omitempty"`
-	UserID    string `json:"id" bson:"-"`
-	Salt      string `json:"-" bson:"salt"`
+	FirstName string        `json:"firstName" bson:"firstName"`
+	LastName  string        `json:"lastName" bson:"lastName"`
+	Email     string        `json:"-" bson:"email"`
+	Username  string        `json:"username" bson:"username"`
+	Password  string        `json:"-" bson:"password,omitempty"`
+	UserID    string        `json:"id" bson:"-"`
+	Salt      string        `json:"-" bson:"salt"`
+	Authority UserAuthority `json:"authority" bson:"authority"`
 }
 
 // New ..
