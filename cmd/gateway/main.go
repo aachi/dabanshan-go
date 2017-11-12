@@ -85,6 +85,13 @@ func main() {
 			pEndpoints.GetProductsEndpoint = retry
 		}
 		{
+			productfactory := addProductFactory(p_endpoint.MakeCreateProductEndpoint, tracer, logger)
+			endpointer := sd.NewEndpointer(productInstancer, productfactory, logger)
+			balancer := lb.NewRoundRobin(endpointer)
+			retry := lb.Retry(*retryMax, *retryTimeout, balancer)
+			pEndpoints.CreateProductEndpoint = retry
+		}
+		{
 			userfactory := addUserFactory(u_endpoint.MakeGetUserEndpoint, tracer, logger)
 			endpointer := sd.NewEndpointer(userInstancer, userfactory, logger)
 			balancer := lb.NewRoundRobin(endpointer)

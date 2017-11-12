@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
+	"github.com/laidingqing/dabanshan/svcs/product/model"
 )
 
 type Middleware func(Service) Service
@@ -26,6 +27,13 @@ func (mw loggingMiddleware) GetProducts(ctx context.Context, a, b int64) (v int6
 		mw.logger.Log("method", "GetProducts", "err", err)
 	}()
 	return mw.next.GetProducts(ctx, a, b)
+}
+
+func (mw loggingMiddleware) CreateProduct(ctx context.Context, req model.CreateProductRequest) (res model.CreateProductResponse, err error) {
+	defer func() {
+		mw.logger.Log("method", "CreateProduct", "err", err)
+	}()
+	return mw.next.CreateProduct(ctx, req)
 }
 
 // InstrumentingMiddleware ..
@@ -50,3 +58,9 @@ func (mw instrumentingMiddleware) GetProducts(ctx context.Context, a, b int64) (
 	// mw.ints.Add(float64(v))
 	return v, err
 }
+
+func (mw instrumentingMiddleware) CreateProduct(ctx context.Context, req model.CreateProductRequest) (model.CreateProductResponse, error) {
+	v, err := mw.next.CreateProduct(ctx, req)
+	return v, err
+}
+

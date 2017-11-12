@@ -2,7 +2,7 @@ package db
 
 import (
 	"errors"
-	"flag"
+	// "flag"
 	"fmt"
 
 	m_user "github.com/laidingqing/dabanshan/svcs/user/model"
@@ -29,7 +29,7 @@ var (
 )
 
 func init() {
-	database = *flag.String("database", "mongodb", "Database to use")
+	// database = *flag.String("database", "mongodb", "Database to use")
 }
 
 //Init inits the selected DB in DefaultDb

@@ -14,19 +14,32 @@ import (
 	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
 	"github.com/laidingqing/dabanshan/svcs/product/service"
+	"github.com/laidingqing/dabanshan/svcs/product/model"
 )
 
 // Set collects all of the endpoints that compose an add service. It's meant to
 // be used as a helper struct, to collect all of the endpoints into a single
 // parameter.
 type Set struct {
+	CreateProductEndpoint endpoint.Endpoint
 	GetProductsEndpoint endpoint.Endpoint
 }
 
 // New returns a Set that wraps the provided server, and wires in all of the
 // expected endpoint middlewares via the various parameters.
 func New(svc service.Service, logger log.Logger, duration metrics.Histogram, trace stdopentracing.Tracer) Set {
-	var getProductsEndpoint endpoint.Endpoint
+	var (
+		createProductEndpoint endpoint.Endpoint
+		getProductsEndpoint endpoint.Endpoint 
+	)
+	{
+		createProductEndpoint = MakeCreateProductEndpoint(svc)
+		createProductEndpoint = ratelimit.NewTokenBucketLimiter(rl.NewBucketWithRate(1, 1))(createProductEndpoint)
+		createProductEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(createProductEndpoint)
+		createProductEndpoint = opentracing.TraceServer(trace, "GetProducts")(createProductEndpoint)
+		createProductEndpoint = LoggingMiddleware(log.With(logger, "method", "GetProducts"))(createProductEndpoint)
+		createProductEndpoint = InstrumentingMiddleware(duration.With("method", "GetProducts"))(createProductEndpoint)
+	}
 	{
 		getProductsEndpoint = MakeGetProductsEndpoint(svc)
 		getProductsEndpoint = ratelimit.NewTokenBucketLimiter(rl.NewBucketWithRate(1, 1))(getProductsEndpoint)
@@ -37,46 +50,49 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 	}
 	return Set{
 		GetProductsEndpoint: getProductsEndpoint,
+		CreateProductEndpoint: createProductEndpoint,
 	}
 }
 
 // GetProducts implements the service interface, so Set may be used as a service.
 // This is primarily useful in the context of a client library.
 func (s Set) GetProducts(ctx context.Context, a, b int64) (int64, error) {
-	resp, err := s.GetProductsEndpoint(ctx, GetProductsRequest{A: a, B: b})
+	resp, err := s.GetProductsEndpoint(ctx, model.GetProductsRequest{A: a, B: b})
 	if err != nil {
 		return 0, err
 	}
-	response := resp.(GetProductsResponse)
+	response := resp.(model.GetProductsResponse)
 	return response.V, response.Err
 }
+
+// CreateProduct implements the service interface, so Set may be used as a service.
+// This is primarily useful in the context of a client library.
+func (s Set) CreateProduct(ctx context.Context, req model.CreateProductRequest) (model.CreateProductResponse, error) {
+	resp, err := s.CreateProductEndpoint(ctx, req)
+	if err != nil {
+		return model.CreateProductResponse{}, err
+	}
+	response := resp.(model.CreateProductResponse)
+	return response, response.Err
+}
+
 
 // MakeGetProductsEndpoint constructs a GetProducts endpoint wrapping the service.
 func MakeGetProductsEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(GetProductsRequest)
+		req := request.(model.GetProductsRequest)
 		v, err := s.GetProducts(ctx, req.A, req.B)
-		return GetProductsResponse{V: v, Err: err}, nil
+		return model.GetProductsResponse{V: v, Err: err}, err
 	}
 }
 
-// Failer is an interface that should be implemented by response types.
-// Response encoders can check if responses are Failer, and if so if they've
-// failed, and if so encode them using a separate write path based on the error.
-type Failer interface {
-	Failed() error
+// MakeCreateProductEndpoint ...
+func MakeCreateProductEndpoint(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(model.CreateProductRequest)
+		v, err := s.CreateProduct(ctx, req)
+		return v, err
+	}
 }
 
-// GetProductsRequest collects the request parameters for the GetProducts method.
-type GetProductsRequest struct {
-	A, B int64
-}
 
-// GetProductsResponse collects the response values for the GetProducts method.
-type GetProductsResponse struct {
-	V   int64 `json:"v"`
-	Err error `json:"-"` // should be intercepted by Failed/errorEncoder
-}
-
-// Failed implements Failer.
-func (r GetProductsResponse) Failed() error { return r.Err }

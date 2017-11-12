@@ -30,6 +30,20 @@ type Mongo struct {
 	Session *mgo.Session
 }
 
+// MongoProduct is a wrapper for the users
+type MongoProduct struct {
+	m_product.Product `bson:",inline"`
+	ID                bson.ObjectId `bson:"_id"`
+}
+
+// NewOrder Returns a new MongoOrder
+func NewProduct() MongoProduct {
+	p := m_product.New()
+	return MongoProduct{
+		Product: p,
+	}
+}
+
 // Init MongoDB
 func (m *Mongo) Init() error {
 	u := getURL()
@@ -42,35 +56,21 @@ func (m *Mongo) Init() error {
 }
 
 // CreateProduct ...
-func (m *Mongo) CreateProduct(p *m_product.Product) error {
+func (m *Mongo) CreateProduct(p *m_product.Product) (string, error) {
 	s := m.Session.Copy()
 	defer s.Close()
 	id := bson.NewObjectId()
-	mp := New()
+	mp := NewProduct()
 	mp.Product = *p
 	mp.ID = id
 	c := s.DB(db).C(collections)
 	_, err := c.UpsertId(mp.ID, mp)
 	if err != nil {
-		return err
+		return "", err
 	}
 	mp.Product.ID = mp.ID.Hex()
 	*p = mp.Product
-	return nil
-}
-
-// MongoProduct is a wrapper for the users
-type MongoProduct struct {
-	m_product.Product `bson:",inline"`
-	ID                bson.ObjectId `bson:"_id"`
-}
-
-// New Returns a new MongoProduct
-func New() MongoProduct {
-	p := m_product.New()
-	return MongoProduct{
-		Product: p,
-	}
+	return mp.ID.Hex(), nil
 }
 
 // EnsureIndexes ensures userid is unique

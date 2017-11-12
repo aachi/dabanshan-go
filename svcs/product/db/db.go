@@ -11,7 +11,7 @@ import (
 // Database represents a simple interface so we can switch to a new system easily
 type Database interface {
 	Init() error
-	CreateProduct(*m_product.Product) error
+	CreateProduct(*m_product.Product) (string, error)
 }
 
 var (
@@ -57,6 +57,6 @@ func Register(name string, db Database) {
 }
 
 //CreateProduct invokes DefaultDb method
-func CreateProduct(p *m_product.Product) error {
+func CreateProduct(p *m_product.Product) (string, error) {
 	return DefaultDb.CreateProduct(p)
 }

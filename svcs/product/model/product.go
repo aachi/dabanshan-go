@@ -19,7 +19,7 @@ type Product struct {
 	ID          string   `json:"id" bson:"-"`
 	UserID      string   `json:"userID" bson:"userID"`
 	CatalogID   string   `json:"catalogID" bson:"catalogID"`
-	Status      int      `json:"status" bson:"status"`
+	Status      int32     `json:"status" bson:"status"`
 	Thumbnails  []string `json:"thumbnails" bson:"thumbnails"`
 }
 
@@ -28,3 +28,35 @@ func New() Product {
 	p := Product{}
 	return p
 }
+
+// CreateProductRequest struct
+type CreateProductRequest struct {
+	Product Product `json:"product"`
+}
+
+// CreatedProductResponse ...
+type CreateProductResponse struct {
+	ID  string `json:"id"`
+	Err error  `json:"-"`
+}
+
+// Failer is an interface that should be implemented by response types.
+// Response encoders can check if responses are Failer, and if so if they've
+// failed, and if so encode them using a separate write path based on the error.
+type Failer interface {
+	Failed() error
+}
+
+// GetProductsRequest collects the request parameters for the GetProducts method.
+type GetProductsRequest struct {
+	A, B int64
+}
+
+// GetProductsResponse collects the response values for the GetProducts method.
+type GetProductsResponse struct {
+	V   int64 `json:"v"`
+	Err error `json:"-"` // should be intercepted by Failed/errorEncoder
+}
+
+// Failed implements Failer.
+func (r GetProductsResponse) Failed() error { return r.Err }

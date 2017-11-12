@@ -8,6 +8,8 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/laidingqing/dabanshan/pb"
+	"github.com/laidingqing/dabanshan/svcs/product/model"
+	"github.com/laidingqing/dabanshan/svcs/product/db"
 )
 
 // Storage
@@ -22,6 +24,7 @@ func init() {
 
 // Service describes a service that adds things together.
 type Service interface {
+	CreateProduct(ctx context.Context, req model.CreateProductRequest) (model.CreateProductResponse, error)
 	GetProducts(ctx context.Context, a, b int64) (int64, error)
 }
 
@@ -66,4 +69,13 @@ func (s basicService) GetProducts(_ context.Context, a, b int64) (int64, error) 
 		return 0, ErrIntOverflow
 	}
 	return a + b, nil
+}
+
+// create product
+func (s basicService) CreateProduct(ctx context.Context, req model.CreateProductRequest) (model.CreateProductResponse, error) {
+	id, err := db.CreateProduct( &req.Product )
+	if err != nil {
+		return model.CreateProductResponse{ID: "", Err: err}, err
+	}
+	return model.CreateProductResponse{ID: id, Err: nil}, err
 }

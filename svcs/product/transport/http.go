@@ -1,23 +1,18 @@
 package transport
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"errors"
-	"io/ioutil"
 	"net/http"
-	"strconv"
+	"errors"
 
 	"github.com/gorilla/mux"
 	stdopentracing "github.com/opentracing/opentracing-go"
 
-	"github.com/go-kit/kit/examples/addsvc/pkg/addendpoint"
+	// "github.com/go-kit/kit/examples/addsvc/pkg/addendpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/tracing/opentracing"
 	httptransport "github.com/go-kit/kit/transport/http"
 	p_endpoint "github.com/laidingqing/dabanshan/svcs/product/endpoint"
-	"github.com/laidingqing/dabanshan/svcs/product/service"
+	// "github.com/laidingqing/dabanshan/svcs/product/service"
 )
 
 var (
@@ -35,6 +30,13 @@ func NewHTTPHandler(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logg
 	// m := http.NewServeMux()
 	r := mux.NewRouter()
 
+	createProductHandle := httptransport.NewServer(
+		endpoints.CreateProductEndpoint,
+		decodeHTTPCreateProductRequest,
+		encodeHTTPGenericResponse,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "CreateProduct", logger)))...,
+	)
+
 	listProductHandle := httptransport.NewServer(
 		endpoints.GetProductsEndpoint,
 		decodeHTTPGetProductRequest,
@@ -50,52 +52,12 @@ func NewHTTPHandler(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logg
 	r.Handle("/api/v1/products/{id}", nil).Methods("GET")           //根据ID获取指定商品
 	r.Handle("/api/v1/products/{id}", nil).Methods("DELETE")        //下架指定商品
 	r.Handle("/api/v1/products/{id}", nil).Methods("PUT")           //修改指定商品
+	r.Handle("/api/v1/products/create", createProductHandle).Methods("POST")           //新增商品
 	return r
 }
 
-func decodeHTTPGetProductRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	// err := json.NewDecoder(r.Body).Decode(&req)
-	// todo convert params..
-	a, _ := strconv.ParseInt(r.FormValue("userid"), 10, 64)
-	b, _ := strconv.ParseInt(r.FormValue("size"), 10, 64)
-	return p_endpoint.GetProductsRequest{A: a, B: b}, nil
-}
 
-func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {
-	w.WriteHeader(err2code(err))
-	json.NewEncoder(w).Encode(errorWrapper{Error: err.Error()})
-}
 
-// encodeHTTPGenericRequest is a transport/http.EncodeRequestFunc that
-// JSON-encodes any request to the request body. Primarily useful in a client.
-func encodeHTTPGenericRequest(_ context.Context, r *http.Request, request interface{}) error {
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(request); err != nil {
-		return err
-	}
-	r.Body = ioutil.NopCloser(&buf)
-	return nil
-}
 
-// encodeHTTPGenericResponse is a transport/http.EncodeResponseFunc that encodes
-// the response as JSON to the response writer. Primarily useful in a server.
-func encodeHTTPGenericResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if f, ok := response.(addendpoint.Failer); ok && f.Failed() != nil {
-		errorEncoder(ctx, f.Failed(), w)
-		return nil
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	return json.NewEncoder(w).Encode(response)
-}
 
-type errorWrapper struct {
-	Error string `json:"error"`
-}
 
-func err2code(err error) int {
-	switch err {
-	case service.ErrTwoZeroes, service.ErrMaxSizeExceeded, service.ErrIntOverflow:
-		return http.StatusBadRequest
-	}
-	return http.StatusInternalServerError
-}

@@ -1,9 +1,8 @@
 package transport
 
 import (
-	"context"
-	"errors"
 	"time"
+	"fmt"
 
 	"google.golang.org/grpc"
 
@@ -23,6 +22,7 @@ import (
 )
 
 type grpcServer struct {
+	createProduct grpctransport.Handler
 	getproducts grpctransport.Handler
 }
 
@@ -32,6 +32,12 @@ func NewGRPCServer(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logge
 		grpctransport.ServerErrorLogger(logger),
 	}
 	return &grpcServer{
+		createProduct: grpctransport.NewServer(
+			endpoints.CreateProductEndpoint,
+			decodeGRPCCreateProductRequest,
+			encodeGRPCCreateProductResponse,
+			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "CreateProduct", logger)))...,
+		),
 		getproducts: grpctransport.NewServer(
 			endpoints.GetProductsEndpoint,
 			decodeGRPCGetProductsRequest,
@@ -41,6 +47,7 @@ func NewGRPCServer(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logge
 	}
 }
 
+// get products
 func (s *grpcServer) GetProducts(ctx oldcontext.Context, req *pb.GetProductsRequest) (*pb.GetProductsResponse, error) {
 	_, rep, err := s.getproducts.ServeGRPC(ctx, req)
 	if err != nil {
@@ -50,20 +57,39 @@ func (s *grpcServer) GetProducts(ctx oldcontext.Context, req *pb.GetProductsRequ
 	return res, nil
 }
 
-func decodeGRPCGetProductsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(*pb.GetProductsRequest)
-	return p_endpoint.GetProductsRequest{A: int64(req.Creatorid), B: int64(req.Size)}, nil
-}
-
-func encodeGRPCGetProductsResponse(_ context.Context, response interface{}) (interface{}, error) {
-	resp := response.(p_endpoint.GetProductsResponse)
-	return &pb.GetProductsResponse{V: int64(resp.V), Err: err2str(resp.Err)}, nil
+// create product
+func (s *grpcServer) CreateProduct(ctx oldcontext.Context, req *pb.CreateProductRequest) (*pb.CreateProductResponse, error) {
+	fmt.Println("create name fmt")
+	_, rep, err := s.createProduct.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	res := rep.(*pb.CreateProductResponse)
+	return res, nil
 }
 
 // NewGRPCClient ...
 func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger log.Logger) service.Service {
 	limiter := ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(100, 100))
 	var getProductsEndpoint endpoint.Endpoint
+	var createProductEndpoint endpoint.Endpoint
+	{
+		createProductEndpoint = grpctransport.NewClient(
+			conn,
+			"pb.ProductRpcService",
+			"CreateProduct",
+			encodeGRPCCreateProductRequest,
+			decodeGRPCCreateProductResponse,
+			pb.CreateProductResponse{},
+			grpctransport.ClientBefore(opentracing.ContextToGRPC(tracer, logger)),
+		).Endpoint()
+		createProductEndpoint = opentracing.TraceClient(tracer, "CreateProduct")(createProductEndpoint)
+		createProductEndpoint = limiter(createProductEndpoint)
+		createProductEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
+			Name:    "CreateProduct",
+			Timeout: 30 * time.Second,
+		}))(createProductEndpoint)
+	}
 	{
 		getProductsEndpoint = grpctransport.NewClient(
 			conn,
@@ -82,30 +108,11 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 		}))(getProductsEndpoint)
 	}
 	return p_endpoint.Set{
+		CreateProductEndpoint: createProductEndpoint,
 		GetProductsEndpoint: getProductsEndpoint,
 	}
 }
 
-func encodeGRPCGetProductsRequest(_ context.Context, request interface{}) (interface{}, error) {
-	req := request.(p_endpoint.GetProductsRequest)
-	return &pb.GetProductsRequest{Creatorid: int64(req.A), Size: int64(req.B)}, nil
-}
 
-func decodeGRPCGetProductsResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
-	reply := grpcReply.(*pb.GetProductsResponse)
-	return p_endpoint.GetProductsResponse{V: int64(reply.V), Err: str2err(reply.Err)}, nil
-}
 
-func str2err(s string) error {
-	if s == "" {
-		return nil
-	}
-	return errors.New(s)
-}
 
-func err2str(err error) string {
-	if err == nil {
-		return ""
-	}
-	return err.Error()
-}
