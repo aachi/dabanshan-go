@@ -29,6 +29,15 @@ define(function() {
     }
     controllers.DashboardCtrl.$inject = ['$scope', '$rootScope'];
 
+    controllers.OrdersMgrCtrl = function($scope, $rootScope) {
+        
+    }
+    controllers.OrdersMgrCtrl.$inject = ['$scope', '$rootScope'];
+    
+    controllers.ProductsMgrCtrl = function($scope, $rootScope) {
+        
+    }
+    controllers.ProductsMgrCtrl.$inject = ['$scope', '$rootScope'];
 
     return controllers;
 });

@@ -90,6 +90,9 @@ ul, ol{
     height: 50px;
 }
 
+.wrapper{
+    background-color: #fff;
+}
 /*HEADER*/
 .header-wrapper{
     height: 50px;
@@ -273,4 +276,34 @@ ul, ol{
     background: rgba(255, 255, 255, 0.14);
     opacity: 1;
     color: #FFFFFF;
+}
+
+/*mgr orders*/
+.order-filters{
+    display: inline-block;
+    margin-top: 6px;
+    margin-bottom: 0;
+    border-bottom: 1px solid #e5e5e5
+}
+.order-filters li{
+    display: inline-block;
+}
+.order-filters li a{
+    font-size: 12px !important;
+    color: #586069 !important;
+    display: inline-block;
+    padding: 5px 5px 0px;
+    margin-right: 5px;
+    border-bottom: 2px solid transparent;
+}
+.order-filters li a.filter-selected{
+    text-decoration: none;
+    border-bottom-color: #e36209;
+    outline: none;
+}
+.content table{
+    margin-top: 10px;
+}
+.content table tbody td{
+    vertical-align: top;
 }
