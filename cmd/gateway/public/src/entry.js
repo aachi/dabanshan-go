@@ -14,6 +14,7 @@ require(['angular', './controllers', './services', 'angular-route'],
           .when('/login', {templateUrl: 'views/login.html?' + +new Date(), controller: controllers.HomeCtrl})
           .when('/explore', {templateUrl: 'views/explore.html?' + +new Date(), controller: controllers.ExploreCtrl})
           .when('/tenants', {templateUrl: 'views/tenants.html?' + +new Date(), controller: controllers.TenantsCtrl})
+          .when('/dashboard', {templateUrl: 'views/dashboard.html?' + +new Date(), controller: controllers.DashboardCtrl})
           .otherwise({redirectTo: '/login'});
     }])
     angular.bootstrap(document, ['app']); 

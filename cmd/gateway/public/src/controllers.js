@@ -24,5 +24,11 @@ define(function() {
     }
     controllers.TenantsCtrl.$inject = ['$scope', '$rootScope'];
 
+    controllers.DashboardCtrl = function($scope, $rootScope) {
+        
+    }
+    controllers.DashboardCtrl.$inject = ['$scope', '$rootScope'];
+
+
     return controllers;
 });

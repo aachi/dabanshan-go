@@ -261,3 +261,16 @@ ul, ol{
     color: #2868d1;
     background: rgba(107, 162, 252, .2)
 }
+
+
+/*sidebar */
+.sidebar .nav > li.active-pro{
+    position: absolute;
+    width: 100%;
+    bottom: 10px;
+}
+.sidebar .nav > li.active-pro a{
+    background: rgba(255, 255, 255, 0.14);
+    opacity: 1;
+    color: #FFFFFF;
+}
