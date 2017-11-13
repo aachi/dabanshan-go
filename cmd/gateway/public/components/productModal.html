@@ -1,0 +1,17 @@
+<div class="modal-header">
+    <h3 class="modal-title">选择坐标</h3>
+</div>
+<div class="modal-body" ng-init="init()">
+    <div class="input-group">
+        <input type="text" class="form-control" ng-model="q" ng-keyup="$event.keyCode == 13 && search(q)" placeholder="Search for...">
+        <span class="input-group-btn">
+            <a class="btn btn-default" ng-click="search(q)">搜索</a>
+        </span>
+    </div><!-- /input-group -->
+    <br />
+    <div gd-map point="point" style="height:400px;"></div>
+</div>
+<div class="modal-footer">
+    <button class="btn btn-sm btn-default" type="button" ng-click="cancel()">取消</button>
+    <button class="btn btn-sm btn-primary" type="button" ng-click="ok()">确定</button>
+</div>

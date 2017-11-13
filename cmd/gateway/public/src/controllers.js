@@ -34,10 +34,27 @@ define(function() {
     }
     controllers.OrdersMgrCtrl.$inject = ['$scope', '$rootScope'];
     
-    controllers.ProductsMgrCtrl = function($scope, $rootScope) {
-        
-    }
-    controllers.ProductsMgrCtrl.$inject = ['$scope', '$rootScope'];
+    controllers.ProductsMgrCtrl = function($scope, $rootScope, $q, $location, $uibModal) {
+        $scope.showModal = function () {
+            var modalInstance = $uibModal.open({
+                templateUrl: '../components/productModal.html',
+                controller: ['$scope', '$uibModal', controllers.NewProductCtrl],
+                size: 'lg',
+                resolve: {
+                    
+                }
+            });
+            return modalInstance;
+        }
 
+    }
+    controllers.ProductsMgrCtrl.$inject = ['$scope','$rootScope','$q','$location', '$uibModal'];
+
+
+    controllers.NewProductCtrl = function($scope, $rootScope) {
+
+    }
+    controllers.NewProductCtrl.$inject = ['$scope', '$rootScope'];
+    
     return controllers;
 });

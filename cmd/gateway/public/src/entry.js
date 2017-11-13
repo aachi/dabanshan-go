@@ -1,5 +1,5 @@
 'use strict';
-require(['angular', './controllers', './services', 'angular-route'], 
+require(['angular', './controllers', './services', 'angular-route', 'angular-animate', 'bootstrap'], 
   function(angular, controllers) {
     angular.module('app', ['app.services', 'ngRoute', 'ui.bootstrap'])
         .run(function($rootScope, $templateCache) {  
