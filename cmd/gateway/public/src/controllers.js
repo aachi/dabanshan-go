@@ -37,7 +37,7 @@ define(function() {
     controllers.ProductsMgrCtrl = function($scope, $rootScope, $q, $location, $uibModal) {
         $scope.showModal = function () {
             var modalInstance = $uibModal.open({
-                templateUrl: '../components/productModal.html',
+                templateUrl: '../components/productModal.html?3',
                 controller: ['$scope', '$uibModal', controllers.NewProductCtrl],
                 size: 'lg',
                 resolve: {

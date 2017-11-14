@@ -4,8 +4,13 @@
         <div ng-include="'../partials/sidebar.html?3'"></div>
     </div>
     <div class="main-panel">
-        <div ng-include="'../partials/top-nav.html?1'"></div>
+        <div ng-include="'../partials/top-nav.html?3'"></div>
         <div class="content">
+            <!-- Error message -->
+            <div data-ng-if="error" class="c-col c-col--12 c-msg c-msg--small c-msg--error c-msg--full-width" data-qa="manage-policies-error-msg">
+                <i class="c-icon icon-alert"></i>
+                <span>{{error | translate}}</span>
+            </div>
             <ui-view></ui-view>
         </div>
     </div>

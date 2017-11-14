@@ -18,8 +18,9 @@ type Product struct {
 	Price       string   `json:"price" bson:"price"`
 	ID          string   `json:"id" bson:"-"`
 	UserID      string   `json:"userID" bson:"userID"`
+	TenantID    string   `json:"tenantID" bson:"tenantID"`
 	CatalogID   string   `json:"catalogID" bson:"catalogID"`
-	Status      int32     `json:"status" bson:"status"`
+	Status      int32    `json:"status" bson:"status"`
 	Thumbnails  []string `json:"thumbnails" bson:"thumbnails"`
 }
 

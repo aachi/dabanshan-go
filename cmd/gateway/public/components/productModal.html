@@ -1,15 +1,59 @@
 <div class="modal-header">
-    <h3 class="modal-title">选择坐标</h3>
+    <h3 class="modal-title">新增要上架商品</h3>
 </div>
 <div class="modal-body" ng-init="init()">
-    <div class="input-group">
-        <input type="text" class="form-control" ng-model="q" ng-keyup="$event.keyCode == 13 && search(q)" placeholder="Search for...">
-        <span class="input-group-btn">
-            <a class="btn btn-default" ng-click="search(q)">搜索</a>
-        </span>
-    </div><!-- /input-group -->
-    <br />
-    <div gd-map point="point" style="height:400px;"></div>
+    <form>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label>名称</label>
+                    <input type="text" class="form-control" placeholder="名称" value="">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="price">价格</label>
+                    <div class="input-group">
+                        <div class="input-group-addon">$</div>
+                        <input type="text" class="form-control" id="price" placeholder="34.8">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                    <div class="form-group">
+                        <label>分类</label>
+                        <select class="form-control">
+                            <option>果蔬</option>
+                        </select>
+                    </div>
+                </div>
+        </div>
+        <div class="row">
+                <div class="col-md-12">
+                    <div class="form-group">
+                        <label>缩略图</label>
+                        <input type="text" class="form-control" placeholder="缩略图" value="">
+                    </div>
+                </div>
+            </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea rows="5" class="form-control" placeholder="简要描述商品" value=""></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group">
+                        <label>
+                            <input type="checkbox"> 立即上架
+                        </label>
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
 <div class="modal-footer">
     <button class="btn btn-sm btn-default" type="button" ng-click="cancel()">取消</button>

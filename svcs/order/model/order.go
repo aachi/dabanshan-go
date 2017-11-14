@@ -23,6 +23,7 @@ type Invoice struct {
 	AddressID  string      `json:"addressId" bson:"addressId"`
 	CreatedAt  time.Time   `json:"createdAt" bson:"createdAt"`
 	Status     OrderStatus `json:"status" bson:"status"`
+	TenantID   string      `json:"tenantID" bson:"tenantID"`
 	OrdereItem []OrderItem `json:"items" bson:"items"`
 }
 
