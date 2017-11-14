@@ -16,7 +16,8 @@ module.exports = {
             './node_modules/angular/angular',
             './node_modules/angular-route/angular-route',
             './node_modules/angular-animate/angular-animate',
-            './node_modules/angular-aria/angular-aria'
+            './node_modules/angular-aria/angular-aria',
+            './node_modules/angular-ui-router/release/angular-ui-router',
         ],
         bootstrap: [
             './node_modules/bootstrap/dist/js/bootstrap',
@@ -45,7 +46,11 @@ module.exports = {
         new CopyWebpackPlugin([
           { from: 'node_modules/bootstrap/dist/css/bootstrap.min.css', to: 'bootstrap/css' },
           { from: 'node_modules/bootstrap/dist/css/bootstrap.min.css.map', to: 'bootstrap/css' },
-          { from: 'node_modules/bootstrap/dist/css/bootstrap.min.css.map', to: 'bootstrap/css' },
+          { from: 'node_modules/bootstrap/dist/fonts/glyphicons-halflings-regular.eot', to: 'bootstrap/fonts' },
+          { from: 'node_modules/bootstrap/dist/fonts/glyphicons-halflings-regular.svg', to: 'bootstrap/fonts' },
+          { from: 'node_modules/bootstrap/dist/fonts/glyphicons-halflings-regular.ttf', to: 'bootstrap/fonts' },
+          { from: 'node_modules/bootstrap/dist/fonts/glyphicons-halflings-regular.woff', to: 'bootstrap/fonts' },
+          { from: 'node_modules/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2', to: 'bootstrap/fonts' },
           { from: 'node_modules/jquery/dist/jquery.min.js', to: './' }
         ])
       ]
