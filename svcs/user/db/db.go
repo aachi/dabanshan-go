@@ -30,6 +30,7 @@ var (
 
 func init() {
 	// database = *flag.String("database", "mongodb", "Database to use")
+	database = "mongodb"
 }
 
 //Init inits the selected DB in DefaultDb
