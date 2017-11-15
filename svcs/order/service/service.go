@@ -8,6 +8,7 @@ import (
 	"github.com/go-kit/kit/metrics"
 	"github.com/laidingqing/dabanshan/svcs/order/db"
 	"github.com/laidingqing/dabanshan/svcs/order/model"
+	"github.com/laidingqing/dabanshan/utils"
 )
 
 var (
@@ -65,10 +66,13 @@ func (s basicService) CreateOrder(ctx context.Context, order model.CreateOrderRe
 // GetOrders get orders by user id or tenant id
 func (s basicService) GetOrders(ctx context.Context, req model.GetOrdersRequest) (model.GetOrdersResponse, error) {
 
-	var orders []model.Invoice
+	var orders utils.Pagination
 	var err error
 	if req.UserID != "" {
-		orders, err = db.GetOrdersByUser(req.UserID)
+		orders, err = db.GetOrdersByUser(req.UserID, utils.Pagination{
+			PageIndex: req.PageIndex,
+			PageSize:  req.PageSize,
+		})
 	}
 
 	if err != nil {
@@ -76,7 +80,10 @@ func (s basicService) GetOrders(ctx context.Context, req model.GetOrdersRequest)
 	}
 
 	if req.TenantID != "" {
-		orders, err = db.GetOrdersByTenant(req.TenantID)
+		orders, err = db.GetOrdersByTenant(req.TenantID, utils.Pagination{
+			PageIndex: req.PageIndex,
+			PageSize:  req.PageSize,
+		})
 	}
 
 	return model.GetOrdersResponse{

@@ -6,14 +6,15 @@ import (
 	corelog "log"
 
 	m_order "github.com/laidingqing/dabanshan/svcs/order/model"
+	"github.com/laidingqing/dabanshan/utils"
 )
 
 // Database represents a simple interface so we can switch to a new system easily
 type Database interface {
 	Init() error
 	CreateOrder(*m_order.Invoice) (string, error)
-	GetOrdersByUser(usrID string) ([]m_order.Invoice, error)
-	GetOrdersByTenant(usrID string) ([]m_order.Invoice, error)
+	GetOrdersByUser(usrID string, page utils.Pagination) (utils.Pagination, error)
+	GetOrdersByTenant(usrID string, page utils.Pagination) (utils.Pagination, error)
 	GetOrder(id string) (m_order.Invoice, error)
 	AddCart(cart *m_order.Cart) (string, error)
 	RemoveCartItem(cartID string) (bool, error)
@@ -70,13 +71,13 @@ func CreateOrder(mo *m_order.Invoice) (string, error) {
 }
 
 // GetOrdersByUser ...
-func GetOrdersByUser(usrID string) ([]m_order.Invoice, error) {
-	return DefaultDb.GetOrdersByUser(usrID)
+func GetOrdersByUser(usrID string, page utils.Pagination) (utils.Pagination, error) {
+	return DefaultDb.GetOrdersByUser(usrID, page)
 }
 
 // GetOrdersByTenant ...
-func GetOrdersByTenant(tenantID string) ([]m_order.Invoice, error) {
-	return DefaultDb.GetOrdersByTenant(tenantID)
+func GetOrdersByTenant(tenantID string, page utils.Pagination) (utils.Pagination, error) {
+	return DefaultDb.GetOrdersByTenant(tenantID, page)
 }
 
 // GetOrder ...

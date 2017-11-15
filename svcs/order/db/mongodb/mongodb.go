@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	m_order "github.com/laidingqing/dabanshan/svcs/order/model"
+	"github.com/laidingqing/dabanshan/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -129,31 +130,53 @@ func (m *Mongo) CreateOrder(u *m_order.Invoice) (string, error) {
 }
 
 // GetOrdersByUser 根据用户查询订单列表.
-func (m *Mongo) GetOrdersByUser(usrID string) ([]m_order.Invoice, error) {
+func (m *Mongo) GetOrdersByUser(usrID string, page utils.Pagination) (utils.Pagination, error) {
 	s := m.Session.Copy()
 	defer s.Close()
 	c := s.DB(db).C(orderCollections)
 	var orders []m_order.Invoice
-	err := c.Find(bson.M{"userId": usrID}).All(&orders)
+	q := c.Find(bson.M{"userId": usrID})
+	total, err := q.Count()
+
+	if len(page.Sortor) > 0 {
+		q = q.Sort(page.Sortor...)
+	}
+	q = q.Skip((page.PageIndex - 1) * page.PageSize).Limit(page.PageSize)
+
+	err = q.All(&orders)
 
 	if err != nil {
-		return nil, err
+		return utils.Pagination{}, err
 	}
-	return orders, nil
+	page.Data = orders
+	page.Count = total
+
+	return page, nil
 }
 
 // GetOrdersByTenant 根据租户查询订单列表.
-func (m *Mongo) GetOrdersByTenant(tenantID string) ([]m_order.Invoice, error) {
+func (m *Mongo) GetOrdersByTenant(tenantID string, page utils.Pagination) (utils.Pagination, error) {
 	s := m.Session.Copy()
 	defer s.Close()
 	c := s.DB(db).C(orderCollections)
 	var orders []m_order.Invoice
-	err := c.Find(bson.M{"tenantID": tenantID}).All(&orders)
+	q := c.Find(bson.M{"tenantId": tenantID})
+	total, err := q.Count()
+
+	if len(page.Sortor) > 0 {
+		q = q.Sort(page.Sortor...)
+	}
+	q = q.Skip((page.PageIndex - 1) * page.PageSize).Limit(page.PageSize)
+
+	err = q.All(&orders)
 
 	if err != nil {
-		return nil, err
+		return utils.Pagination{}, err
 	}
-	return orders, nil
+	page.Data = orders
+	page.Count = total
+
+	return page, nil
 }
 
 // GetOrder 根据用户查询订单.

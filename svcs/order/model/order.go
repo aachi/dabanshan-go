@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"github.com/laidingqing/dabanshan/utils"
 )
 
 // OrderItem represents .
@@ -72,8 +74,10 @@ type CreateCartRequest struct {
 
 // GetOrdersRequest struct
 type GetOrdersRequest struct {
-	UserID   string `json:"userID"`
-	TenantID string `json:"TenantID"`
+	UserID    string `json:"userID"`
+	TenantID  string `json:"TenantID"`
+	PageIndex int    `json:"pageIndex"`
+	PageSize  int    `json:"pageSize"`
 }
 
 // GetOrderRequest struct
@@ -89,8 +93,8 @@ type CreatedCartResponse struct {
 
 // GetOrdersResponse ...
 type GetOrdersResponse struct {
-	Orders []Invoice `json:"orders"`
-	Err    error     `json:"-"`
+	Orders utils.Pagination `json:"orders"`
+	Err    error            `json:"-"`
 }
 
 // GetOrderResponse ...
