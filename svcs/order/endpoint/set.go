@@ -22,6 +22,7 @@ import (
 type Set struct {
 	CreateOrderEndpoint    endpoint.Endpoint
 	GetOrdersEndpoint      endpoint.Endpoint
+	GetOrderEndpoint       endpoint.Endpoint
 	CreateCartEndpoint     endpoint.Endpoint
 	GetCartItemsEndpoint   endpoint.Endpoint
 	RemoveCartItemEndpoint endpoint.Endpoint
@@ -34,6 +35,7 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 	var (
 		createOrderEndpoint    endpoint.Endpoint
 		getOrdersEndpoint      endpoint.Endpoint
+		getOrderEndpoint       endpoint.Endpoint
 		addCartEndpoint        endpoint.Endpoint
 		getCartItemsEndpoint   endpoint.Endpoint
 		removeCartItemEndpoint endpoint.Endpoint
@@ -48,12 +50,21 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 		createOrderEndpoint = InstrumentingMiddleware(duration.With("method", "CreateOrder"))(createOrderEndpoint)
 	}
 	{
-		getOrdersEndpoint = MakeGetOrderEndpoint(svc)
+		getOrdersEndpoint = MakeGetOrdersEndpoint(svc)
 		getOrdersEndpoint = ratelimit.NewTokenBucketLimiter(rl.NewBucketWithRate(1, 1))(getOrdersEndpoint)
 		getOrdersEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(getOrdersEndpoint)
 		getOrdersEndpoint = opentracing.TraceServer(trace, "GetOrders")(getOrdersEndpoint)
 		getOrdersEndpoint = LoggingMiddleware(log.With(logger, "method", "GetOrders"))(getOrdersEndpoint)
 		getOrdersEndpoint = InstrumentingMiddleware(duration.With("method", "GetOrders"))(getOrdersEndpoint)
+
+	}
+	{
+		getOrderEndpoint = MakeGetOrderEndpoint(svc)
+		getOrderEndpoint = ratelimit.NewTokenBucketLimiter(rl.NewBucketWithRate(1, 1))(getOrderEndpoint)
+		getOrderEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(getOrderEndpoint)
+		getOrderEndpoint = opentracing.TraceServer(trace, "GetOrder")(getOrderEndpoint)
+		getOrderEndpoint = LoggingMiddleware(log.With(logger, "method", "GetOrder"))(getOrderEndpoint)
+		getOrderEndpoint = InstrumentingMiddleware(duration.With("method", "GetOrder"))(getOrderEndpoint)
 
 	}
 	{
@@ -92,6 +103,7 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 	return Set{
 		CreateOrderEndpoint:    createOrderEndpoint,
 		GetOrdersEndpoint:      getOrdersEndpoint,
+		GetOrderEndpoint:       getOrderEndpoint,
 		CreateCartEndpoint:     addCartEndpoint,
 		GetCartItemsEndpoint:   getCartItemsEndpoint,
 		RemoveCartItemEndpoint: removeCartItemEndpoint,
@@ -116,6 +128,16 @@ func (s Set) GetOrders(ctx context.Context, a m_order.GetOrdersRequest) (m_order
 		return m_order.GetOrdersResponse{}, err
 	}
 	response := resp.(m_order.GetOrdersResponse)
+	return response, response.Err
+}
+
+// GetOrder implements the service interface, so Set may be used as a service.
+func (s Set) GetOrder(ctx context.Context, a m_order.GetOrderRequest) (m_order.GetOrderResponse, error) {
+	resp, err := s.GetOrderEndpoint(ctx, a)
+	if err != nil {
+		return m_order.GetOrderResponse{}, err
+	}
+	response := resp.(m_order.GetOrderResponse)
 	return response, response.Err
 }
 
@@ -168,11 +190,20 @@ func MakeCreateOrderEndpoint(s service.Service) endpoint.Endpoint {
 	}
 }
 
-// MakeGetOrderEndpoint constructs a GetOrders endpoint wrapping the service.
-func MakeGetOrderEndpoint(s service.Service) endpoint.Endpoint {
+// MakeGetOrdersEndpoint constructs a GetOrders endpoint wrapping the service.
+func MakeGetOrdersEndpoint(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(m_order.GetOrdersRequest)
 		v, err := s.GetOrders(ctx, req)
+		return v, err
+	}
+}
+
+// MakeGetOrderEndpoint constructs a GetOrders endpoint wrapping the service.
+func MakeGetOrderEndpoint(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(m_order.GetOrderRequest)
+		v, err := s.GetOrder(ctx, req)
 		return v, err
 	}
 }

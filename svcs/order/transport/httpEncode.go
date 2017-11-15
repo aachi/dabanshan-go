@@ -27,10 +27,21 @@ func decodeHTTPCreateOrderRequest(_ context.Context, r *http.Request) (interface
 }
 
 func decodeHTTPGetOrdersRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	id, _ := vars["userId"]
+	userID := r.FormValue("userId")
+	tenantID := r.FormValue("tenantId")
+
 	a := model.GetOrdersRequest{
-		UserID: id,
+		UserID:   userID,
+		TenantID: tenantID,
+	}
+	return a, nil
+}
+
+func decodeHTTPGetOrderRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, _ := vars["orderId"]
+	a := model.GetOrderRequest{
+		OrderID: id,
 	}
 	return a, nil
 }

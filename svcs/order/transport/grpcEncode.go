@@ -36,7 +36,8 @@ func encodeGRPCCreateOrderResponse(_ context.Context, response interface{}) (int
 func decodeGRPCGetOrdersRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*pb.GetOrdersRequest)
 	return model.GetOrdersRequest{
-		UserID: req.Userid,
+		UserID:   req.Userid,
+		TenantID: req.Tenantid,
 	}, nil
 }
 
@@ -44,6 +45,23 @@ func encodeGRPCGetOrdersResponse(_ context.Context, response interface{}) (inter
 	resp := response.(model.GetOrdersResponse)
 	return &pb.GetOrdersResponse{
 		Err: err2str(resp.Err),
+	}, nil
+}
+
+// GetOrder encode/decode
+
+func decodeGRPCGetOrderRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.GetOrderRequest)
+	return model.GetOrderRequest{
+		OrderID: req.Orderid,
+	}, nil
+}
+
+func encodeGRPCGetOrderResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(model.GetOrderResponse)
+	return &pb.GetOrderResponse{
+		Invoice: &pb.InvoiceRecord{}, //todo
+		Err:     err2str(resp.Err),
 	}, nil
 }
 
@@ -146,6 +164,22 @@ func decodeGRPCGetOrdersResponse(_ context.Context, grpcReply interface{}) (inte
 	reply := grpcReply.(*pb.GetOrdersResponse)
 	return model.GetOrdersResponse{
 		Err: str2err(reply.Err)}, nil
+}
+
+// getOrder encode/decode func
+
+func encodeGRPCGetOrderRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(model.GetOrderRequest)
+	return &pb.GetOrderRequest{
+		Orderid: req.OrderID,
+	}, nil
+}
+
+func decodeGRPCGetOrderResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
+	reply := grpcReply.(*pb.GetOrderResponse)
+	return model.GetOrderResponse{
+		Order: model.Invoice{}, // TODO
+		Err:   str2err(reply.Err)}, nil
 }
 
 func encodeGRPCAddCartRequest(_ context.Context, request interface{}) (interface{}, error) {

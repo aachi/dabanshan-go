@@ -19,6 +19,7 @@ var (
 type Service interface {
 	CreateOrder(ctx context.Context, order model.CreateOrderRequest) (model.CreatedOrderResponse, error)
 	GetOrders(ctx context.Context, req model.GetOrdersRequest) (model.GetOrdersResponse, error)
+	GetOrder(ctx context.Context, req model.GetOrderRequest) (model.GetOrderResponse, error)
 	AddCart(ctx context.Context, req model.CreateCartRequest) (model.CreatedCartResponse, error)
 	GetCartItems(ctx context.Context, req model.GetCartItemsRequest) (model.GetCartItemsResponse, error)
 	RemoveCartItem(ctx context.Context, req model.RemoveCartItemRequest) (model.RemoveCartItemResponse, error)
@@ -61,15 +62,41 @@ func (s basicService) CreateOrder(ctx context.Context, order model.CreateOrderRe
 	}, nil
 }
 
-// GetOrders get orders by user id
+// GetOrders get orders by user id or tenant id
 func (s basicService) GetOrders(ctx context.Context, req model.GetOrdersRequest) (model.GetOrdersResponse, error) {
-	orders, err := db.GetOrders(req.UserID)
+
+	var orders []model.Invoice
+	var err error
+	if req.UserID != "" {
+		orders, err = db.GetOrdersByUser(req.UserID)
+	}
+
 	if err != nil {
 		return model.GetOrdersResponse{Err: err}, err
 	}
+
+	if req.TenantID != "" {
+		orders, err = db.GetOrdersByTenant(req.TenantID)
+	}
+
 	return model.GetOrdersResponse{
 		Orders: orders,
 		Err:    nil,
+	}, nil
+}
+
+// GetOrder get order by id
+func (s basicService) GetOrder(ctx context.Context, req model.GetOrderRequest) (model.GetOrderResponse, error) {
+
+	order, err := db.GetOrder(req.OrderID)
+
+	if err != nil {
+		return model.GetOrderResponse{Err: err}, err
+	}
+
+	return model.GetOrderResponse{
+		Order: order,
+		Err:   nil,
 	}, nil
 }
 

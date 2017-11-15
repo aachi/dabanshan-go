@@ -22,6 +22,7 @@ import (
 type grpcServer struct {
 	createOrder    grpctransport.Handler
 	getOrders      grpctransport.Handler
+	getOrder       grpctransport.Handler
 	addCart        grpctransport.Handler
 	getCartItems   grpctransport.Handler
 	removeCartItem grpctransport.Handler
@@ -45,6 +46,12 @@ func NewGRPCServer(endpoints o_endpoint.Set, tracer stdopentracing.Tracer, logge
 			decodeGRPCGetOrdersRequest,
 			encodeGRPCGetOrdersResponse,
 			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "GetOrders", logger)))...,
+		),
+		getOrder: grpctransport.NewServer(
+			endpoints.GetOrderEndpoint,
+			decodeGRPCGetOrderRequest,
+			encodeGRPCGetOrderResponse,
+			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "GetOrder", logger)))...,
 		),
 		addCart: grpctransport.NewServer(
 			endpoints.CreateCartEndpoint,
@@ -94,6 +101,16 @@ func (s *grpcServer) GetOrders(ctx oldcontext.Context, req *pb.GetOrdersRequest)
 	return res, nil
 }
 
+// GetOrder
+func (s *grpcServer) GetOrder(ctx oldcontext.Context, req *pb.GetOrderRequest) (*pb.GetOrderResponse, error) {
+	_, rep, err := s.getOrder.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	res := rep.(*pb.GetOrderResponse)
+	return res, nil
+}
+
 // AddCart
 func (s *grpcServer) AddCart(ctx oldcontext.Context, req *pb.CreateCartRequest) (*pb.CreatedCartResponse, error) {
 	_, rep, err := s.addCart.ServeGRPC(ctx, req)
@@ -139,6 +156,7 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 	limiter := ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(100, 100))
 	var createOrderEndpoint endpoint.Endpoint
 	var getOrdersEndpoint endpoint.Endpoint
+	var getOrderEndpoint endpoint.Endpoint
 	var addCartEndpoint endpoint.Endpoint
 	var getCartItemsEndpoint endpoint.Endpoint
 	var removeCartItemEndpoint endpoint.Endpoint
@@ -175,6 +193,22 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 			Name:    "GetOrders",
 			Timeout: 30 * time.Second,
 		}))(getOrdersEndpoint)
+
+		getOrderEndpoint = grpctransport.NewClient(
+			conn,
+			"pb.OrderRpcService",
+			"GetOrder",
+			encodeGRPCGetOrderRequest,
+			decodeGRPCGetOrderResponse,
+			pb.GetOrdersResponse{},
+			grpctransport.ClientBefore(opentracing.ContextToGRPC(tracer, logger)),
+		).Endpoint()
+		getOrderEndpoint = opentracing.TraceClient(tracer, "GetOrders")(getOrderEndpoint)
+		getOrderEndpoint = limiter(getOrderEndpoint)
+		getOrderEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
+			Name:    "GetOrder",
+			Timeout: 30 * time.Second,
+		}))(getOrderEndpoint)
 
 		addCartEndpoint = grpctransport.NewClient(
 			conn,
@@ -243,6 +277,7 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 	return o_endpoint.Set{
 		CreateOrderEndpoint:    createOrderEndpoint,
 		GetOrdersEndpoint:      getOrdersEndpoint,
+		GetOrderEndpoint:       getOrderEndpoint,
 		CreateCartEndpoint:     addCartEndpoint,
 		GetCartItemsEndpoint:   getCartItemsEndpoint,
 		RemoveCartItemEndpoint: removeCartItemEndpoint,

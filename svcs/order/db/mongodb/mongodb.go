@@ -128,13 +128,27 @@ func (m *Mongo) CreateOrder(u *m_order.Invoice) (string, error) {
 	return mu.ID.Hex(), nil
 }
 
-// GetOrders 根据用户查询订单列表.
-func (m *Mongo) GetOrders(usrID string) ([]m_order.Invoice, error) {
+// GetOrdersByUser 根据用户查询订单列表.
+func (m *Mongo) GetOrdersByUser(usrID string) ([]m_order.Invoice, error) {
 	s := m.Session.Copy()
 	defer s.Close()
 	c := s.DB(db).C(orderCollections)
 	var orders []m_order.Invoice
 	err := c.Find(bson.M{"userId": usrID}).All(&orders)
+
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
+}
+
+// GetOrdersByTenant 根据租户查询订单列表.
+func (m *Mongo) GetOrdersByTenant(tenantID string) ([]m_order.Invoice, error) {
+	s := m.Session.Copy()
+	defer s.Close()
+	c := s.DB(db).C(orderCollections)
+	var orders []m_order.Invoice
+	err := c.Find(bson.M{"tenantID": tenantID}).All(&orders)
 
 	if err != nil {
 		return nil, err

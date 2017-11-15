@@ -32,9 +32,16 @@ func (mw loggingMiddleware) CreateOrder(ctx context.Context, a model.CreateOrder
 
 func (mw loggingMiddleware) GetOrders(ctx context.Context, a model.GetOrdersRequest) (v model.GetOrdersResponse, err error) {
 	defer func() {
-		mw.logger.Log("method", "CreateOrder", "err", err)
+		mw.logger.Log("method", "GetOrders", "err", err)
 	}()
 	return mw.next.GetOrders(ctx, a)
+}
+
+func (mw loggingMiddleware) GetOrder(ctx context.Context, a model.GetOrderRequest) (v model.GetOrderResponse, err error) {
+	defer func() {
+		mw.logger.Log("method", "GetOrder", "err", err)
+	}()
+	return mw.next.GetOrder(ctx, a)
 }
 
 func (mw loggingMiddleware) AddCart(ctx context.Context, a model.CreateCartRequest) (v model.CreatedCartResponse, err error) {
@@ -89,6 +96,10 @@ func (mw instrumentingMiddleware) CreateOrder(ctx context.Context, a model.Creat
 
 func (mw instrumentingMiddleware) GetOrders(ctx context.Context, a model.GetOrdersRequest) (model.GetOrdersResponse, error) {
 	v, err := mw.next.GetOrders(ctx, a)
+	return v, err
+}
+func (mw instrumentingMiddleware) GetOrder(ctx context.Context, a model.GetOrderRequest) (model.GetOrderResponse, error) {
+	v, err := mw.next.GetOrder(ctx, a)
 	return v, err
 }
 

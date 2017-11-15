@@ -39,10 +39,20 @@ message CreatedOrderResponse{
 
 message GetOrdersRequest{
     string userid = 1;
+    string tenantid = 2;
 }
 
 message GetOrdersResponse{
     repeated InvoiceRecord invoices = 1;
+    string err = 2;
+}
+
+message GetOrderRequest{
+    string orderid = 1;
+}
+
+message GetOrderResponse{
+    InvoiceRecord invoice = 1;
     string err = 2;
 }
 

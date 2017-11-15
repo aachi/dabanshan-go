@@ -72,7 +72,13 @@ type CreateCartRequest struct {
 
 // GetOrdersRequest struct
 type GetOrdersRequest struct {
-	UserID string `json:"userID"`
+	UserID   string `json:"userID"`
+	TenantID string `json:"TenantID"`
+}
+
+// GetOrderRequest struct
+type GetOrderRequest struct {
+	OrderID string `json:"orderID"`
 }
 
 // CreatedCartResponse ...
@@ -85,6 +91,12 @@ type CreatedCartResponse struct {
 type GetOrdersResponse struct {
 	Orders []Invoice `json:"orders"`
 	Err    error     `json:"-"`
+}
+
+// GetOrderResponse ...
+type GetOrderResponse struct {
+	Order Invoice `json:"order"`
+	Err   error   `json:"-"`
 }
 
 // GetCartItemsRequest ...

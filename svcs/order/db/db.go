@@ -12,7 +12,8 @@ import (
 type Database interface {
 	Init() error
 	CreateOrder(*m_order.Invoice) (string, error)
-	GetOrders(usrID string) ([]m_order.Invoice, error)
+	GetOrdersByUser(usrID string) ([]m_order.Invoice, error)
+	GetOrdersByTenant(usrID string) ([]m_order.Invoice, error)
 	GetOrder(id string) (m_order.Invoice, error)
 	AddCart(cart *m_order.Cart) (string, error)
 	RemoveCartItem(cartID string) (bool, error)
@@ -68,9 +69,14 @@ func CreateOrder(mo *m_order.Invoice) (string, error) {
 	return DefaultDb.CreateOrder(mo)
 }
 
-// GetOrders ...
-func GetOrders(usrID string) ([]m_order.Invoice, error) {
-	return DefaultDb.GetOrders(usrID)
+// GetOrdersByUser ...
+func GetOrdersByUser(usrID string) ([]m_order.Invoice, error) {
+	return DefaultDb.GetOrdersByUser(usrID)
+}
+
+// GetOrdersByTenant ...
+func GetOrdersByTenant(tenantID string) ([]m_order.Invoice, error) {
+	return DefaultDb.GetOrdersByTenant(tenantID)
 }
 
 // GetOrder ...
