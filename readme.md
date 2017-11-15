@@ -21,6 +21,7 @@
 * download and launch consul as default discover service.
 * "go run cmd/productsvc/main.go" for launch product service
 * "go run cmd/usersvc/main.go" for launch user service
+* "go run cmd/ordersvc/main.go" for launch order service
 * "go run cmd/gateway/main.go" fro launch gateway api
 
 ## debug example

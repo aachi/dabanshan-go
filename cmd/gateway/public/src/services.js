@@ -64,13 +64,13 @@ define(['angular'], function (angular) {
                     var headers = { 'Content-Type': 'application/json' };
                     var jsonObject = angular.toJson({ "username": inputUsername, "password": inputPassword });
                     $http.post(Config.url + this.type + '/login', jsonObject, { headers: headers })
-                        .success(function (response) {
+                        .then(function (response) {
                             User.setUsername(response.user.username);
                             User.setToken(response.token);
                             User.storeUserLocally(response.user);
                             callback(response);
                         })
-                        .error(function (err) {
+                        .catch(function (err) {
                             callback(err);
                         })
                 },
