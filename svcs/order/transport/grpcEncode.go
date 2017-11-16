@@ -165,6 +165,9 @@ func encodeGRPCGetOrdersRequest(_ context.Context, request interface{}) (interfa
 func decodeGRPCGetOrdersResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
 	reply := grpcReply.(*pb.GetOrdersResponse)
 	return model.GetOrdersResponse{
+		Orders: utils.Pagination{
+			PageIndex: 10,
+		},
 		Err: str2err(reply.Err)}, nil
 }
 
