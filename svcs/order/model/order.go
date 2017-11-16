@@ -9,7 +9,7 @@ import (
 // OrderItem represents .
 type OrderItem struct {
 	Quantity  int32   `json:"quantity" bson:"quantity"`
-	ProductID int64   `json:"code" bson:"productId"`
+	ProductID string  `json:"code" bson:"productId"`
 	Price     float32 `json:"price" bson:"price"`
 	Total     float32 `json:"total" bson:"total"`
 	CartID    string  `json:"cartID" bson:"cartID"`
@@ -93,8 +93,10 @@ type CreatedCartResponse struct {
 
 // GetOrdersResponse ...
 type GetOrdersResponse struct {
-	Orders utils.Pagination `json:"orders"`
-	Err    error            `json:"-"`
+	UserID   string           `json:"userId"`
+	TenantID string           `json:"tenanId"`
+	Orders   utils.Pagination `json:"orders"`
+	Err      error            `json:"-"`
 }
 
 // GetOrderResponse ...

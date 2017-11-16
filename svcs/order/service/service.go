@@ -87,8 +87,10 @@ func (s basicService) GetOrders(ctx context.Context, req model.GetOrdersRequest)
 	}
 
 	return model.GetOrdersResponse{
-		Orders: orders,
-		Err:    nil,
+		UserID:   req.UserID,
+		TenantID: req.TenantID,
+		Orders:   orders,
+		Err:      nil,
 	}, nil
 }
 

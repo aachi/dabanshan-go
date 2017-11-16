@@ -4,7 +4,7 @@ package pb;
 
 
 message InvoiceRecord{
-    string amount = 1;
+    float amount = 1;
     string userid = 2;
     repeated OrderItemRecord items = 3;
 }
@@ -45,8 +45,12 @@ message GetOrdersRequest{
 }
 
 message GetOrdersResponse{
-    repeated InvoiceRecord invoices = 1;
-    string err = 2;
+    string userid = 1;
+    string tenantid = 2;
+    int32 pageIndex = 3;
+    int32 pageSize = 4;
+    repeated InvoiceRecord invoices = 5;
+    string err = 6;
 }
 
 message GetOrderRequest{

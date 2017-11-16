@@ -43,8 +43,17 @@ func decodeGRPCGetOrdersRequest(_ context.Context, grpcReq interface{}) (interfa
 
 func encodeGRPCGetOrdersResponse(_ context.Context, response interface{}) (interface{}, error) {
 	resp := response.(model.GetOrdersResponse)
+	logger := utils.NewLogger()
+	logger.Log("userID", resp.UserID)
+
+	invoices := resp.Orders.Data.([]model.Invoice)
 	return &pb.GetOrdersResponse{
-		Err: err2str(resp.Err),
+		Userid:    resp.UserID,
+		Tenantid:  resp.TenantID,
+		PageIndex: int32(resp.Orders.PageIndex),
+		PageSize:  int32(resp.Orders.PageSize),
+		Invoices:  modelOrder2Pb(invoices),
+		Err:       err2str(resp.Err),
 	}, nil
 }
 
@@ -165,8 +174,12 @@ func encodeGRPCGetOrdersRequest(_ context.Context, request interface{}) (interfa
 func decodeGRPCGetOrdersResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
 	reply := grpcReply.(*pb.GetOrdersResponse)
 	return model.GetOrdersResponse{
+		UserID:   reply.Userid,
+		TenantID: reply.Tenantid,
 		Orders: utils.Pagination{
-			PageIndex: 10,
+			PageIndex: int(reply.PageIndex),
+			PageSize:  int(reply.PageSize),
+			Data:      pbOrder2Model(reply.Invoices),
 		},
 		Err: str2err(reply.Err)}, nil
 }
@@ -309,6 +322,43 @@ func modelCartItem2Pb(models []model.Cart) []*pb.OrderItemRecord {
 			Userid:    model.UserID,
 			Cartid:    model.CartID,
 			Quantity:  model.Quantity,
+		})
+	}
+
+	return records
+}
+
+func pbOrderItem2Model(records []*pb.OrderItemRecord) []model.OrderItem {
+	var models []model.OrderItem
+	for _, record := range records {
+		models = append(models, model.OrderItem{
+			Price:     record.Price,
+			ProductID: record.Productid,
+			Quantity:  record.Quantity,
+		})
+	}
+	return models
+}
+
+func pbOrder2Model(records []*pb.InvoiceRecord) []model.Invoice {
+	var models []model.Invoice
+	for _, record := range records {
+		models = append(models, model.Invoice{
+			UserID:     record.Userid,
+			Amount:     record.Amount,
+			OrdereItem: pbOrderItem2Model(record.Items),
+		})
+	}
+	return models
+}
+
+func modelOrder2Pb(models []model.Invoice) []*pb.InvoiceRecord {
+	var records []*pb.InvoiceRecord
+	for _, model := range models {
+		records = append(records, &pb.InvoiceRecord{
+			Amount: model.Amount,
+			Userid: model.UserID,
+			Items:  modelInvoice2Pb(model.OrdereItem),
 		})
 	}
 
