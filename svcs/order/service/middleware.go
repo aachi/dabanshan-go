@@ -32,7 +32,7 @@ func (mw loggingMiddleware) CreateOrder(ctx context.Context, a model.CreateOrder
 
 func (mw loggingMiddleware) GetOrders(ctx context.Context, a model.GetOrdersRequest) (v model.GetOrdersResponse, err error) {
 	defer func() {
-		mw.logger.Log("method", "GetOrders", "err", err)
+		mw.logger.Log("method", "GetOrders", "userId", a.UserID, "pageIndex", a.PageIndex, "pageSize", a.PageSize, "err", err)
 	}()
 	return mw.next.GetOrders(ctx, a)
 }

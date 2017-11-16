@@ -156,7 +156,9 @@ func decodeGRPCCreateOrderResponse(_ context.Context, grpcReply interface{}) (in
 func encodeGRPCGetOrdersRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(model.GetOrdersRequest)
 	return &pb.GetOrdersRequest{
-		Userid: req.UserID,
+		Userid:    req.UserID,
+		PageIndex: int32(req.PageIndex),
+		PageSize:  int32(req.PageSize),
 	}, nil
 }
 

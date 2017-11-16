@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/laidingqing/dabanshan/svcs/order/model"
@@ -29,10 +30,15 @@ func decodeHTTPCreateOrderRequest(_ context.Context, r *http.Request) (interface
 func decodeHTTPGetOrdersRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	userID := r.FormValue("userId")
 	tenantID := r.FormValue("tenantId")
-
+	pageIndex, _ := strconv.Atoi(r.FormValue("pageIndex"))
+	pageSize, _ := strconv.Atoi(r.FormValue("pageSize"))
+	logger := utils.NewLogger()
+	logger.Log("pageIndex", pageIndex, "pageSize", pageSize, "userID", userID)
 	a := model.GetOrdersRequest{
-		UserID:   userID,
-		TenantID: tenantID,
+		UserID:    userID,
+		TenantID:  tenantID,
+		PageIndex: pageIndex,
+		PageSize:  pageSize,
 	}
 	return a, nil
 }

@@ -40,6 +40,8 @@ message CreatedOrderResponse{
 message GetOrdersRequest{
     string userid = 1;
     string tenantid = 2;
+    int32 pageIndex = 3;
+    int32 pageSize = 4;
 }
 
 message GetOrdersResponse{
