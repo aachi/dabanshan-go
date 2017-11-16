@@ -95,15 +95,16 @@ define(['angular'], function (angular) {
         .factory('OrderService', ['$http', 'Config', function ($http, Config) {
             var Order = {
                 type: 'orders',
-                getOrdersByTenant: function (tenantID, callback) {
+                getOrdersByTenant: function (tenantID, callback, errCallback) {
                     var headers = { 'Content-Type': 'application/json' };
-                    var jsonObject = angular.toJson({ "tenantID": tenantID});
-                    $http.get(Config.url + this.type + '/', jsonObject, { headers: headers })
-                        .success(function (response) {
-                            callback(response);
+                    $http.get(Config.url + this.type + '/', {params: { "userId": "59f05169668b9bcc7d442355", "pageIndex": 0, "pageSize": 10}}, { headers: headers })
+                        .then(function (response) {
+                            if( response.status == 200){
+                                callback(response.data);
+                            }
                         })
-                        .error(function (err) {
-                            callback(err);
+                        .catch(function (err) {
+                            errCallback(err);
                         })
                 }
             }

@@ -29,10 +29,19 @@ define(function() {
     }
     controllers.DashboardCtrl.$inject = ['$scope', '$rootScope'];
 
-    controllers.OrdersMgrCtrl = function($scope, $rootScope) {
-        
+    controllers.OrdersMgrCtrl = function($scope, $rootScope, OrderService) {
+        $scope.orders = []
+        init = function() {
+            OrderService.getOrdersByTenant("", function(res){
+                console.log(res)
+                $scope.orders = res.orders.Data
+            }, function(err){
+                console.log("err:", err)
+            })
+        }
+        init();
     }
-    controllers.OrdersMgrCtrl.$inject = ['$scope', '$rootScope'];
+    controllers.OrdersMgrCtrl.$inject = ['$scope', '$rootScope', 'OrderService'];
     
     controllers.ProductsMgrCtrl = function($scope, $rootScope, $q, $location, $uibModal) {
         $scope.showModal = function () {

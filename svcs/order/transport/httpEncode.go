@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -12,6 +13,11 @@ import (
 	"github.com/laidingqing/dabanshan/svcs/order/model"
 	"github.com/laidingqing/dabanshan/svcs/order/service"
 	"github.com/laidingqing/dabanshan/utils"
+)
+
+var (
+	// ErrRequestParams ...
+	ErrRequestParams = errors.New("userID or tenantID is required.")
 )
 
 func decodeHTTPCreateOrderRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -32,8 +38,10 @@ func decodeHTTPGetOrdersRequest(_ context.Context, r *http.Request) (interface{}
 	tenantID := r.FormValue("tenantId")
 	pageIndex, _ := strconv.Atoi(r.FormValue("pageIndex"))
 	pageSize, _ := strconv.Atoi(r.FormValue("pageSize"))
-	logger := utils.NewLogger()
-	logger.Log("pageIndex", pageIndex, "pageSize", pageSize, "userID", userID)
+
+	if !(userID != "" || tenantID != "") {
+		return nil, ErrRequestParams
+	}
 	a := model.GetOrdersRequest{
 		UserID:    userID,
 		TenantID:  tenantID,
