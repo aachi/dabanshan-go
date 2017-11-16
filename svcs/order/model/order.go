@@ -18,6 +18,7 @@ type OrderItem struct {
 
 // Invoice represents.
 type Invoice struct {
+	InvoiceID  int64       `json:"inoiceID" bson:"inoiceID"`
 	Amount     float32     `json:"amount" bson:"amount"`
 	Discount   float32     `json:"discount" bson:"discount"`
 	DiscountID float32     `json:"discountid" bson:"discountId"`
@@ -50,7 +51,11 @@ type Cart struct {
 
 // New ..
 func New() Invoice {
-	u := Invoice{}
+	gf, _ := utils.NewGlowFlake(1, 1)
+	id, _ := gf.NextId()
+	u := Invoice{
+		InvoiceID: id,
+	}
 	return u
 }
 
