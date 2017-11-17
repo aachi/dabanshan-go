@@ -108,7 +108,6 @@ func (s basicService) Login(ctx context.Context, login model.LoginRequest) (mode
 }
 
 func (s basicService) Upload(ctx context.Context, manifestName string, manifest io.Reader, fileName string, file io.Reader) (string, error) {
-
 	return "", nil
 }
 

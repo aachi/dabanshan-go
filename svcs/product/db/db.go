@@ -12,7 +12,7 @@ import (
 type Database interface {
 	Init() error
 	CreateProduct(*m_product.Product) (string, error)
-	UploadGfs(body []byte) (string, error)
+	UploadGfs(body []byte, md5 string, name string) (string, error)
 }
 
 var (
@@ -63,6 +63,6 @@ func CreateProduct(p *m_product.Product) (string, error) {
 }
 
 // UploadGfs invokes DefaultDb method
-func UploadGfs(body []byte) (string, error) {
-	return DefaultDb.UploadGfs(body)
+func UploadGfs(body []byte, md5 string, name string) (string, error) {
+	return DefaultDb.UploadGfs(body, md5, name)
 }

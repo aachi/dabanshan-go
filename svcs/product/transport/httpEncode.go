@@ -1,11 +1,11 @@
 package transport
 
 import (
-	"net/http"
 	"bytes"
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"net/http"
 	"strconv"
 
 	// p_endpoint "github.com/laidingqing/dabanshan/svcs/product/endpoint"
@@ -29,6 +29,13 @@ func decodeHTTPGetProductRequest(_ context.Context, r *http.Request) (interface{
 	a, _ := strconv.ParseInt(r.FormValue("userid"), 10, 64)
 	b, _ := strconv.ParseInt(r.FormValue("size"), 10, 64)
 	return model.GetProductsRequest{A: a, B: b}, nil
+}
+
+func decodeHTTPUploadRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	// TODO
+	return model.UploadProductRequest{
+		Name: "",
+	}, nil
 }
 
 func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {

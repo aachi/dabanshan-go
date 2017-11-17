@@ -76,7 +76,7 @@ func (m *Mongo) CreateProduct(p *m_product.Product) (string, error) {
 }
 
 // UploadGfs ...
-func (m *Mongo) UploadGfs(body []byte) (string, error) {
+func (m *Mongo) UploadGfs(body []byte, md5 string, name string) (string, error) {
 	gf, _ := utils.NewGlowFlake(1, 1)
 	id, _ := gf.NextId()
 	fsid := strconv.FormatInt(id, 10)

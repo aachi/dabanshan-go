@@ -13,8 +13,8 @@ import (
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
-	"github.com/laidingqing/dabanshan/svcs/product/service"
 	"github.com/laidingqing/dabanshan/svcs/product/model"
+	"github.com/laidingqing/dabanshan/svcs/product/service"
 )
 
 // Set collects all of the endpoints that compose an add service. It's meant to
@@ -22,7 +22,8 @@ import (
 // parameter.
 type Set struct {
 	CreateProductEndpoint endpoint.Endpoint
-	GetProductsEndpoint endpoint.Endpoint
+	GetProductsEndpoint   endpoint.Endpoint
+	UploadEndpoint        endpoint.Endpoint
 }
 
 // New returns a Set that wraps the provided server, and wires in all of the
@@ -30,7 +31,8 @@ type Set struct {
 func New(svc service.Service, logger log.Logger, duration metrics.Histogram, trace stdopentracing.Tracer) Set {
 	var (
 		createProductEndpoint endpoint.Endpoint
-		getProductsEndpoint endpoint.Endpoint 
+		getProductsEndpoint   endpoint.Endpoint
+		uploadEndpoint        endpoint.Endpoint
 	)
 	{
 		createProductEndpoint = MakeCreateProductEndpoint(svc)
@@ -48,9 +50,18 @@ func New(svc service.Service, logger log.Logger, duration metrics.Histogram, tra
 		getProductsEndpoint = LoggingMiddleware(log.With(logger, "method", "GetProducts"))(getProductsEndpoint)
 		getProductsEndpoint = InstrumentingMiddleware(duration.With("method", "GetProducts"))(getProductsEndpoint)
 	}
+	{
+		uploadEndpoint = MakeUploadEndpoint(svc)
+		uploadEndpoint = ratelimit.NewTokenBucketLimiter(rl.NewBucketWithRate(1, 1))(uploadEndpoint)
+		uploadEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{}))(uploadEndpoint)
+		uploadEndpoint = opentracing.TraceServer(trace, "Upload")(uploadEndpoint)
+		uploadEndpoint = LoggingMiddleware(log.With(logger, "method", "Upload"))(uploadEndpoint)
+		uploadEndpoint = InstrumentingMiddleware(duration.With("method", "Upload"))(uploadEndpoint)
+	}
 	return Set{
-		GetProductsEndpoint: getProductsEndpoint,
+		GetProductsEndpoint:   getProductsEndpoint,
 		CreateProductEndpoint: createProductEndpoint,
+		UploadEndpoint:        uploadEndpoint,
 	}
 }
 
@@ -76,6 +87,15 @@ func (s Set) CreateProduct(ctx context.Context, req model.CreateProductRequest) 
 	return response, response.Err
 }
 
+// Upload implements the service interface, so Set may be used as a service.
+func (s Set) Upload(ctx context.Context, req model.UploadProductRequest) (model.UploadProductResponse, error) {
+	resp, err := s.UploadEndpoint(ctx, req)
+	if err != nil {
+		return model.UploadProductResponse{}, err
+	}
+	response := resp.(model.UploadProductResponse)
+	return response, response.Err
+}
 
 // MakeGetProductsEndpoint constructs a GetProducts endpoint wrapping the service.
 func MakeGetProductsEndpoint(s service.Service) endpoint.Endpoint {
@@ -95,4 +115,11 @@ func MakeCreateProductEndpoint(s service.Service) endpoint.Endpoint {
 	}
 }
 
-
+// MakeUploadEndpoint ...
+func MakeUploadEndpoint(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(model.UploadProductRequest)
+		v, err := s.Upload(ctx, req)
+		return v, err
+	}
+}

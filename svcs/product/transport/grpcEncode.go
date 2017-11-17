@@ -17,9 +17,25 @@ func decodeGRPCGetProductsRequest(_ context.Context, grpcReq interface{}) (inter
 	req := grpcReq.(*pb.GetProductsRequest)
 	return model.GetProductsRequest{A: int64(req.Creatorid), B: int64(req.Size)}, nil
 }
+
 func encodeGRPCGetProductsResponse(_ context.Context, response interface{}) (interface{}, error) {
 	resp := response.(model.GetProductsResponse)
 	return &pb.GetProductsResponse{V: int64(resp.V), Err: err2str(resp.Err)}, nil
+}
+
+// Upload ...
+func decodeGRPCUploadRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.ProductUploadRequest)
+	return model.UploadProductRequest{
+		Name: req.Name,
+		Md5:  req.Md5,
+		Body: req.B,
+	}, nil
+}
+
+func encodeGRPCUploadResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(model.UploadProductResponse)
+	return &pb.ProductUploadResponse{Name: resp.ID}, nil
 }
 
 // create products encode/decode
@@ -30,13 +46,13 @@ func decodeGRPCCreateProductRequest(_ context.Context, grpcReq interface{}) (int
 	fmt.Println("create name fmt", req.Name)
 	return model.CreateProductRequest{
 		Product: model.Product{
-			Name: req.Name,
+			Name:        req.Name,
 			Description: req.Description,
-			Price: req.Price,
-			UserID: req.UserID,
-			CatalogID: req.CatalogID,
-			Status: req.Status,
-			Thumbnails: req.Thumbnails,
+			Price:       req.Price,
+			UserID:      req.UserID,
+			CatalogID:   req.CatalogID,
+			Status:      req.Status,
+			Thumbnails:  req.Thumbnails,
 		},
 	}, nil
 }
@@ -54,13 +70,13 @@ func encodeGRPCCreateProductResponse(_ context.Context, response interface{}) (i
 func encodeGRPCCreateProductRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(model.CreateProductRequest)
 	return &pb.CreateProductRequest{
-		Name: req.Product.Name,
+		Name:        req.Product.Name,
 		Description: req.Product.Description,
-		Price: req.Product.Price,
-		UserID: req.Product.UserID,
-		CatalogID: req.Product.CatalogID,
-		Status: req.Product.Status,
-		Thumbnails: req.Product.Thumbnails,
+		Price:       req.Product.Price,
+		UserID:      req.Product.UserID,
+		CatalogID:   req.Product.CatalogID,
+		Status:      req.Product.Status,
+		Thumbnails:  req.Product.Thumbnails,
 	}, nil
 }
 
@@ -82,7 +98,20 @@ func decodeGRPCGetProductsResponse(_ context.Context, grpcReply interface{}) (in
 	return model.GetProductsResponse{V: int64(reply.V), Err: str2err(reply.Err)}, nil
 }
 
+// upload
+func encodeGRPCUploadRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(model.UploadProductRequest)
+	return &pb.ProductUploadRequest{
+		Name: req.Name,
+		B:    req.Body,
+		Md5:  req.Md5,
+	}, nil
+}
 
+func decodeGRPCUploadResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
+	reply := grpcReply.(*pb.ProductUploadResponse)
+	return model.UploadProductResponse{ID: reply.Name}, nil
+}
 
 func str2err(s string) error {
 	if s == "" {

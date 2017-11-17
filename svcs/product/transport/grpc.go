@@ -1,8 +1,8 @@
 package transport
 
 import (
-	"time"
 	"fmt"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -23,7 +23,8 @@ import (
 
 type grpcServer struct {
 	createProduct grpctransport.Handler
-	getproducts grpctransport.Handler
+	getproducts   grpctransport.Handler
+	upload        grpctransport.Handler
 }
 
 // NewGRPCServer ...
@@ -43,6 +44,12 @@ func NewGRPCServer(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logge
 			decodeGRPCGetProductsRequest,
 			encodeGRPCGetProductsResponse,
 			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "GetProducts", logger)))...,
+		),
+		upload: grpctransport.NewServer(
+			endpoints.UploadEndpoint,
+			decodeGRPCUploadRequest,
+			encodeGRPCUploadResponse,
+			append(options, grpctransport.ServerBefore(opentracing.GRPCToContext(tracer, "Upload", logger)))...,
 		),
 	}
 }
@@ -68,11 +75,22 @@ func (s *grpcServer) CreateProduct(ctx oldcontext.Context, req *pb.CreateProduct
 	return res, nil
 }
 
+// Upload images
+func (s *grpcServer) Upload(ctx oldcontext.Context, req *pb.ProductUploadRequest) (*pb.ProductUploadResponse, error) {
+	_, rep, err := s.upload.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	res := rep.(*pb.ProductUploadResponse)
+	return res, nil
+}
+
 // NewGRPCClient ...
 func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger log.Logger) service.Service {
 	limiter := ratelimit.NewTokenBucketLimiter(jujuratelimit.NewBucketWithRate(100, 100))
 	var getProductsEndpoint endpoint.Endpoint
 	var createProductEndpoint endpoint.Endpoint
+	var uploadEndpoint endpoint.Endpoint
 	{
 		createProductEndpoint = grpctransport.NewClient(
 			conn,
@@ -107,12 +125,26 @@ func NewGRPCClient(conn *grpc.ClientConn, tracer stdopentracing.Tracer, logger l
 			Timeout: 30 * time.Second,
 		}))(getProductsEndpoint)
 	}
+	{
+		uploadEndpoint = grpctransport.NewClient(
+			conn,
+			"pb.ProductRpcService",
+			"Upload",
+			encodeGRPCUploadRequest,
+			decodeGRPCUploadResponse,
+			pb.ProductUploadResponse{},
+			grpctransport.ClientBefore(opentracing.ContextToGRPC(tracer, logger)),
+		).Endpoint()
+		uploadEndpoint = opentracing.TraceClient(tracer, "Upload")(uploadEndpoint)
+		uploadEndpoint = limiter(uploadEndpoint)
+		uploadEndpoint = circuitbreaker.Gobreaker(gobreaker.NewCircuitBreaker(gobreaker.Settings{
+			Name:    "Upload",
+			Timeout: 30 * time.Second,
+		}))(uploadEndpoint)
+	}
 	return p_endpoint.Set{
 		CreateProductEndpoint: createProductEndpoint,
-		GetProductsEndpoint: getProductsEndpoint,
+		GetProductsEndpoint:   getProductsEndpoint,
+		UploadEndpoint:        uploadEndpoint,
 	}
 }
-
-
-
-

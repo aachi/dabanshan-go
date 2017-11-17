@@ -36,6 +36,13 @@ func (mw loggingMiddleware) CreateProduct(ctx context.Context, req model.CreateP
 	return mw.next.CreateProduct(ctx, req)
 }
 
+func (mw loggingMiddleware) Upload(ctx context.Context, req model.UploadProductRequest) (res model.UploadProductResponse, err error) {
+	defer func() {
+		mw.logger.Log("method", "Upload", "err", err)
+	}()
+	return mw.next.Upload(ctx, req)
+}
+
 // InstrumentingMiddleware ..
 func InstrumentingMiddleware(ints, chars metrics.Counter) Middleware {
 	return func(next Service) Service {
@@ -64,3 +71,7 @@ func (mw instrumentingMiddleware) CreateProduct(ctx context.Context, req model.C
 	return v, err
 }
 
+func (mw instrumentingMiddleware) Upload(ctx context.Context, req model.UploadProductRequest) (model.UploadProductResponse, error) {
+	v, err := mw.next.Upload(ctx, req)
+	return v, err
+}

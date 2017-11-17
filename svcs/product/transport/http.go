@@ -1,8 +1,8 @@
 package transport
 
 import (
-	"net/http"
 	"errors"
+	"net/http"
 
 	"github.com/gorilla/mux"
 	stdopentracing "github.com/opentracing/opentracing-go"
@@ -44,20 +44,22 @@ func NewHTTPHandler(endpoints p_endpoint.Set, tracer stdopentracing.Tracer, logg
 		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "GetProducts", logger)))...,
 	)
 
+	uploadHandle := httptransport.NewServer(
+		endpoints.UploadEndpoint,
+		decodeHTTPUploadRequest,
+		encodeHTTPGenericResponse,
+		append(options, httptransport.ServerBefore(opentracing.HTTPToContext(tracer, "Upload", logger)))...,
+	)
+
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		logger.Log("params", r.FormValue("user"))
 		w.WriteHeader(http.StatusOK)
 	})
-	r.Handle("/api/v1/products/", listProductHandle).Methods("GET") //获取所有商品，包含按条件分页:catalogID=?
-	r.Handle("/api/v1/products/{id}", nil).Methods("GET")           //根据ID获取指定商品
-	r.Handle("/api/v1/products/{id}", nil).Methods("DELETE")        //下架指定商品
-	r.Handle("/api/v1/products/{id}", nil).Methods("PUT")           //修改指定商品
-	r.Handle("/api/v1/products/create", createProductHandle).Methods("POST")           //新增商品
+	r.Handle("/api/v1/products/", listProductHandle).Methods("GET")          //获取所有商品，包含按条件分页:catalogID=?
+	r.Handle("/api/v1/products/{id}", nil).Methods("GET")                    //根据ID获取指定商品
+	r.Handle("/api/v1/products/{id}", nil).Methods("DELETE")                 //下架指定商品
+	r.Handle("/api/v1/products/{id}", nil).Methods("PUT")                    //修改指定商品
+	r.Handle("/api/v1/products/create", createProductHandle).Methods("POST") //新增商品
+	r.Handle("/api/v1/products/upload", uploadHandle).Methods("POST")        //上传图像
 	return r
 }
-
-
-
-
-
-

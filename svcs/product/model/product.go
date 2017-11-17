@@ -35,8 +35,21 @@ type CreateProductRequest struct {
 	Product Product `json:"product"`
 }
 
-// CreatedProductResponse ...
+// CreateProductResponse ...
 type CreateProductResponse struct {
+	ID  string `json:"id"`
+	Err error  `json:"-"`
+}
+
+// UploadProductRequest struct
+type UploadProductRequest struct {
+	Body []byte
+	Md5  string
+	Name string
+}
+
+// UploadProductResponse ...
+type UploadProductResponse struct {
 	ID  string `json:"id"`
 	Err error  `json:"-"`
 }

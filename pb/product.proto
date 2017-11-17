@@ -34,6 +34,16 @@ message GetProductsResponse{
     string err = 2;
 }
 
+message ProductUploadRequest{
+    bytes b = 1;
+    string md5 = 2;
+    string name = 3;
+}
+
+message ProductUploadResponse{
+    string name = 1;
+}
+
 message ProductRecord{
     string creator = 1;
     string name = 2;
@@ -45,4 +55,5 @@ message ProductRecord{
 service ProductRpcService{
     rpc GetProducts(GetProductsRequest) returns (GetProductsResponse) {}
     rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse) {}
+    rpc Upload(ProductUploadRequest) returns (ProductUploadResponse) {}
 }

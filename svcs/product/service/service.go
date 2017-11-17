@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"io"
 	"sync"
 
 	"github.com/go-kit/kit/log"
@@ -27,7 +26,7 @@ func init() {
 type Service interface {
 	CreateProduct(ctx context.Context, req model.CreateProductRequest) (model.CreateProductResponse, error)
 	GetProducts(ctx context.Context, a, b int64) (int64, error)
-	Upload(ctx context.Context, manifestName string, manifest io.Reader, fileName string, file io.Reader) (string, error)
+	Upload(ctx context.Context, req model.UploadProductRequest) (model.UploadProductResponse, error)
 }
 
 // New returns a basic Service with all of the expected middlewares wired in.
@@ -83,7 +82,12 @@ func (s basicService) CreateProduct(ctx context.Context, req model.CreateProduct
 }
 
 // Upload implement upload file to fs.
-func (s basicService) Upload(ctx context.Context, manifestName string, manifest io.Reader, fileName string, file io.Reader) (string, error) {
-
-	return "", nil
+func (s basicService) Upload(ctx context.Context, req model.UploadProductRequest) (model.UploadProductResponse, error) {
+	id, err := db.UploadGfs(req.Body, req.Md5, req.Name)
+	if err != nil {
+		return model.UploadProductResponse{Err: err}, err
+	}
+	return model.UploadProductResponse{
+		ID: id,
+	}, nil
 }
