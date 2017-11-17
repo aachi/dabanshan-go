@@ -3,7 +3,10 @@ package transport
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -11,6 +14,11 @@ import (
 	// p_endpoint "github.com/laidingqing/dabanshan/svcs/product/endpoint"
 	"github.com/laidingqing/dabanshan/svcs/product/model"
 	"github.com/laidingqing/dabanshan/svcs/product/service"
+)
+
+var (
+	// ErrUploadPartParams ...
+	ErrUploadPartParams = errors.New("file part error.")
 )
 
 func decodeHTTPCreateProductRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -32,9 +40,21 @@ func decodeHTTPGetProductRequest(_ context.Context, r *http.Request) (interface{
 }
 
 func decodeHTTPUploadRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	// TODO
+	file, handle, err := r.FormFile("file")
+	defer file.Close()
+	if err != nil {
+		return ErrUploadPartParams, nil
+	}
+	buff := make([]byte, 512)
+	if _, err = file.Read(buff); err != nil {
+		return ErrUploadPartParams, nil
+	}
+	vmd5 := fmt.Sprintf("%x", md5.Sum(buff))
+
 	return model.UploadProductRequest{
-		Name: "",
+		Name: handle.Filename,
+		Md5:  vmd5,
+		Body: buff,
 	}, nil
 }
 
