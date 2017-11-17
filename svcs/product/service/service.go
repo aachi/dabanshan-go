@@ -3,13 +3,14 @@ package service
 import (
 	"context"
 	"errors"
+	"io"
 	"sync"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
 	"github.com/laidingqing/dabanshan/pb"
-	"github.com/laidingqing/dabanshan/svcs/product/model"
 	"github.com/laidingqing/dabanshan/svcs/product/db"
+	"github.com/laidingqing/dabanshan/svcs/product/model"
 )
 
 // Storage
@@ -26,6 +27,7 @@ func init() {
 type Service interface {
 	CreateProduct(ctx context.Context, req model.CreateProductRequest) (model.CreateProductResponse, error)
 	GetProducts(ctx context.Context, a, b int64) (int64, error)
+	Upload(ctx context.Context, manifestName string, manifest io.Reader, fileName string, file io.Reader) (string, error)
 }
 
 // New returns a basic Service with all of the expected middlewares wired in.
@@ -73,9 +75,15 @@ func (s basicService) GetProducts(_ context.Context, a, b int64) (int64, error) 
 
 // create product
 func (s basicService) CreateProduct(ctx context.Context, req model.CreateProductRequest) (model.CreateProductResponse, error) {
-	id, err := db.CreateProduct( &req.Product )
+	id, err := db.CreateProduct(&req.Product)
 	if err != nil {
 		return model.CreateProductResponse{ID: "", Err: err}, err
 	}
 	return model.CreateProductResponse{ID: id, Err: nil}, err
+}
+
+// Upload implement upload file to fs.
+func (s basicService) Upload(ctx context.Context, manifestName string, manifest io.Reader, fileName string, file io.Reader) (string, error) {
+
+	return "", nil
 }

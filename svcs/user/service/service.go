@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"io"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/metrics"
@@ -23,6 +24,7 @@ type Service interface {
 	GetUser(ctx context.Context, id string) (model.GetUserResponse, error)
 	Register(ctx context.Context, RegisterRequest model.RegisterRequest) (model.RegisterUserResponse, error)
 	Login(ctx context.Context, login model.LoginRequest) (model.LoginResponse, error)
+	Upload(ctx context.Context, manifestName string, manifest io.Reader, fileName string, file io.Reader) (string, error)
 }
 
 // New returns a basic Service with all of the expected middlewares wired in.
@@ -103,6 +105,11 @@ func (s basicService) Login(ctx context.Context, login model.LoginRequest) (mode
 		User:  &u,
 		Token: t,
 	}, nil
+}
+
+func (s basicService) Upload(ctx context.Context, manifestName string, manifest io.Reader, fileName string, file io.Reader) (string, error) {
+
+	return "", nil
 }
 
 // private func

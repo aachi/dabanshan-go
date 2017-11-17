@@ -12,6 +12,7 @@ import (
 type Database interface {
 	Init() error
 	CreateProduct(*m_product.Product) (string, error)
+	UploadGfs(body []byte) (string, error)
 }
 
 var (
@@ -59,4 +60,9 @@ func Register(name string, db Database) {
 //CreateProduct invokes DefaultDb method
 func CreateProduct(p *m_product.Product) (string, error) {
 	return DefaultDb.CreateProduct(p)
+}
+
+// UploadGfs invokes DefaultDb method
+func UploadGfs(body []byte) (string, error) {
+	return DefaultDb.UploadGfs(body)
 }

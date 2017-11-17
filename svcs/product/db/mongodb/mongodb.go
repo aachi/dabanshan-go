@@ -3,9 +3,11 @@ package mongodb
 import (
 	"flag"
 	"net/url"
+	"strconv"
 	"time"
 
 	m_product "github.com/laidingqing/dabanshan/svcs/product/model"
+	"github.com/laidingqing/dabanshan/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -71,6 +73,25 @@ func (m *Mongo) CreateProduct(p *m_product.Product) (string, error) {
 	mp.Product.ID = mp.ID.Hex()
 	*p = mp.Product
 	return mp.ID.Hex(), nil
+}
+
+// UploadGfs ...
+func (m *Mongo) UploadGfs(body []byte) (string, error) {
+	gf, _ := utils.NewGlowFlake(1, 1)
+	id, _ := gf.NextId()
+	fsid := strconv.FormatInt(id, 10)
+	s := m.Session.Copy()
+	defer s.Close()
+	fs, err := s.DB(db).GridFS("fs").Create(fsid)
+	if err != nil {
+		return "", err
+	}
+	defer fs.Close()
+	fs.SetName(fsid)
+	if _, err := fs.Write(body); err != nil {
+		return "", err
+	}
+	return fsid, nil
 }
 
 // EnsureIndexes ensures userid is unique

@@ -8,3 +8,12 @@ type Pagination struct {
 	Sortor    []string
 	Data      interface{}
 }
+
+// Image struct
+type Image struct {
+	Filepath []byte
+	Md5      string
+}
+
+// Images muti imgs.
+type Images []*Image
